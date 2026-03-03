@@ -584,3 +584,75 @@ tbody tr.row-edited {
     align-items: flex-start;
   }
 }
+
+@media (max-width: 768px) {
+  #mobile-menu-btn {
+    display: block !important;
+    margin-bottom: 10px;
+    align-self: flex-start;
+  }
+
+  .content {
+    padding: 10px;
+  }
+
+  .card {
+    padding: 12px;
+  }
+
+  input,
+  select,
+  button {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+
+  input,
+  select {
+    padding: 12px 14px;
+    min-height: 44px;
+  }
+
+  .btn {
+    padding: 12px 16px;
+    min-height: 44px;
+  }
+
+  .btn.small {
+    padding: 10px 12px;
+    min-height: 40px;
+  }
+
+  .nav button {
+    padding: 14px 16px;
+    font-size: 16px;
+  }
+
+  .table-wrap {
+    border-radius: 8px;
+  }
+
+  table {
+    font-size: 14px;
+  }
+
+  th,
+  td {
+    padding: 8px;
+  }
+
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi {
+    padding: 16px;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions .btn {
+    width: 100%;
+  }
+}
