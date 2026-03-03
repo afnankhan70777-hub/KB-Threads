@@ -33,6 +33,7 @@
       </aside>
 
       <main class="content">
+        <button id="mobile-menu-btn" class="btn small hidden">☰ Menu</button>
         <section id="login-section" class="card glass login-wrap">
           <h2>Welcome</h2>
           <p class="muted">Login with your username and password to continue.</p>
@@ -1586,6 +1587,7 @@
               return;
             }
             setSection(section);
+            byId("sidebar").classList.remove("open"); // Close mobile menu
           });
         });
 
@@ -1594,12 +1596,17 @@
             const target = btn.getAttribute("data-target");
             if (!canAccess(target)) return alert("No permission for this module.");
             setSection(target);
+            byId("sidebar").classList.remove("open"); // Close mobile menu
           });
         });
 
         byId("dashboard-refresh-btn")?.addEventListener("click", () => {
           renderDashboard();
           showSavedFeedback(byId("dashboard-refresh-btn"), "Dashboard refreshed");
+        });
+
+        byId("mobile-menu-btn")?.addEventListener("click", () => {
+          byId("sidebar").classList.toggle("open");
         });
       }
 
