@@ -143,7 +143,7 @@
               </label>
               <label>Output Item (optional) <input id="process-output-item" type="text" list="item-list" placeholder="Leave empty = same item" /></label>
               <label>Process
-                <select id="process-type"><option>Dyeing</option><option>Doubling</option><option>Yarn To Cone</option><option>Glaze</option><option>Baby Cone</option><option>Thaika</option></select>
+                <select id="process-type"><option>Dyeing</option><option>Doubling</option><option>Yarn To Cone</option><option>Glaze</option><option>Baby Cone</option></select>
               </label>
               <label>Location
                 <select id="process-location"><option value="">Select location</option></select>
@@ -318,7 +318,7 @@
                 <input id="report-location" type="text" list="location-list" placeholder="Leave empty for all" />
               </label>
               <label>Process
-                <select id="report-process"><option value="All">All</option><option>Dyeing</option><option>Doubling</option><option>Yarn To Cone</option><option>Glaze</option><option>Baby Cone</option><option>Thaika</option></select>
+                <select id="report-process"><option value="All">All</option><option>Dyeing</option><option>Doubling</option><option>Yarn To Cone</option><option>Glaze</option><option>Baby Cone</option></select>
               </label>
               <label>From Date <input id="report-from-date" type="date" /></label>
               <label>To Date <input id="report-to-date" type="date" /></label>
@@ -476,7 +476,7 @@
         if (nameType !== "raw") return nameType;
         if (processKey === "yarn to cone" || processKey === "baby cone") return "grey_cone";
         if (processKey === "dyeing" || processKey === "glaze") return "dyed_cone";
-        if (processKey === "doubling" || processKey === "thaika") return "other_processed";
+        if (processKey === "doubling") return "other_processed";
         return "other_processed";
       }
       function getInventoryTypeLabel(type) {
