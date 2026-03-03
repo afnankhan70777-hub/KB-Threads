@@ -1,0 +1,3104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KB Threads | Smart Inventory</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div>
+          <h1>KB Threads</h1>
+          <p class="muted">Easy Inventory Record</p>
+        </div>
+
+        <nav id="main-nav" class="nav hidden">
+          <button data-section="dashboard">Home</button>
+          <button data-section="inventory">Inventory</button>
+          <button data-section="process">Work Entry</button>
+          <button data-section="transfer">Transfers</button>
+          <button data-section="sales">Sales</button>
+          <button data-section="finance">Income/Expense</button>
+          <button data-section="reports">Reports</button>
+          <button data-section="admin">Staff Access</button>
+        </nav>
+
+        <div class="spacer"></div>
+        <div id="user-box" class="hidden user-card">
+          <p id="whoami" class="muted"></p>
+          <button id="logout-btn" class="btn danger">Logout</button>
+        </div>
+      </aside>
+
+      <main class="content">
+        <section id="login-section" class="card glass login-wrap">
+          <h2>Welcome</h2>
+          <p class="muted">Login with your username and password to continue.</p>
+          <div class="grid two">
+            <label>Username <input id="username" type="text" placeholder="admin" /></label>
+            <label>Password <input id="password" type="password" placeholder="••••••••" /></label>
+          </div>
+          <div class="actions">
+            <button id="login-btn" class="btn">Login</button>
+            <button id="register-btn" class="btn secondary">Create Account</button>
+          </div>
+          <p id="login-status" class="muted tiny"></p>
+        </section>
+
+        <section id="dashboard" class="hidden">
+          <div class="hero card glass">
+            <div>
+              <h2>Daily Workboard</h2>
+              <p class="muted">Choose one action and save. That’s it.</p>
+            </div>
+            <div class="quick-actions">
+              <button class="btn ghost jump" data-target="inventory">+ Inventory</button>
+              <button class="btn ghost jump" data-target="process">+ Work</button>
+              <button class="btn ghost jump" data-target="transfer">+ Transfer</button>
+              <button class="btn ghost jump" data-target="sales">+ Sales</button>
+              <button class="btn ghost jump" data-target="finance">+ Income/Expense</button>
+              <button id="dashboard-refresh-btn" class="btn secondary" type="button">↻ Refresh</button>
+            </div>
+          </div>
+
+          <div class="stats grid four gap-4">
+            <div class="kpi card glass">
+              <h3>Total Yarn Stock</h3>
+              <div id="total-kg" class="text-4xl font-bold text-blue-300">0 kg</div>
+              <div id="total-bags" class="muted text-lg">≈ 0 bags</div>
+            </div>
+
+            <div class="kpi card glass">
+              <h3>Ready for Sale</h3>
+              <div id="sellable-kg" class="text-4xl font-bold text-green-400">0 kg</div>
+              <div class="muted">Grey Cone / Dyed Cone / Processed</div>
+            </div>
+
+            <div class="kpi card glass">
+              <h3>Today's Processing</h3>
+              <div id="today-processed" class="text-xl">0 kg → 0 kg</div>
+              <div id="today-loss" class="text-sm muted">Loss: 0 kg</div>
+            </div>
+
+            <div class="kpi card glass">
+              <h3>Today's Sales</h3>
+              <div id="today-sold" class="text-xl">0 kg</div>
+              <div id="today-sales-value" class="text-sm muted">Value: 0 Rs</div>
+            </div>
+          </div>
+
+          <div class="card glass mt-6">
+            <h3>Stock Breakdown by Type</h3>
+            <div id="type-breakdown" class="grid two md:grid-cols-4 gap-4 mt-4"></div>
+          </div>
+        </section>
+
+        <section id="inventory" class="hidden section-grid">
+          <div class="card glass">
+            <h3>Inventory Entry</h3>
+            <p class="muted tiny">Required: Item, Location, Quantity in kg. Bags are shown automatically (≈ kg / 20).</p>
+            <p id="inventory-edit-hint" class="tiny hidden">Editing mode: update values and click Save.</p>
+            <div class="grid three">
+              <label>Item <input id="item-name" type="text" placeholder="20/1 Yarn" /></label>
+              <label>Location <input id="item-location" type="text" list="location-list" placeholder="Main Unit" /></label>
+              <label>Type
+                <select id="item-type">
+                  <option value="raw">raw</option>
+                  <option value="grey_cone">grey_cone</option>
+                  <option value="dyed_cone">dyed_cone</option>
+                  <option value="other_processed">other_processed</option>
+                </select>
+              </label>
+              <label>Quantity (kg) <input id="item-qty" type="number" min="0" step="1" /></label>
+              <p class="tiny muted">System will auto-store bags as approximately kg / 20.</p>
+            </div>
+            <div class="actions">
+              <button id="save-item-btn" class="btn">Save Inventory</button>
+              <button id="cancel-item-edit-btn" class="btn secondary hidden" type="button">Cancel Edit</button>
+              <button id="remove-item-btn" class="btn danger hidden" type="button">Remove Item</button>
+            </div>
+          </div>
+          <div class="card glass">
+            <h3>Current Stock</h3>
+            <div class="grid"><label>Search <input id="inventory-search" type="text" placeholder="Search item or location" /></label></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Item</th><th>Location</th><th>Type</th><th>Qty (kg)</th><th>Qty (bags)</th><th>Avg kg/bag</th><th>Status</th><th>Updated</th><th>Action</th></tr></thead>
+                <tbody id="inventory-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="process" class="hidden section-grid">
+          <div class="card glass">
+            <h3>Record Processing / Dyeing / Cone Making</h3>
+            <p class="muted tiny">Just two main numbers — sent kg and received kg.</p>
+            <p id="process-edit-hint" class="tiny hidden">Editing mode: values and linked inventory will be recalculated on save.</p>
+            <div class="grid three">
+              <label>Input Item
+                <select id="process-item"><option value="">Select item</option></select>
+              </label>
+              <label>Output Item (optional) <input id="process-output-item" type="text" list="item-list" placeholder="Leave empty = same item" /></label>
+              <label>Process
+                <select id="process-type"><option>Dyeing</option><option>Doubling</option><option>Yarn To Cone</option><option>Glaze</option><option>Baby Cone</option><option>Thaika</option></select>
+              </label>
+              <label>Location
+                <select id="process-location"><option value="">Select location</option></select>
+              </label>
+              <label>Vendor / Mill <input id="process-vendor" type="text" placeholder="Vendor name" /></label>
+              <label>You sent to mill / processing (kg) <input id="process-sent-kg" type="number" min="0" step="1" /></label>
+              <label>You received back (kg) <input id="process-received-kg" type="number" min="0" step="1" /></label>
+              <label id="cones-produced-wrap" class="hidden">Cones Produced (optional) <input id="process-cones" type="number" min="0" step="1" value="0" /></label>
+              <label id="cones-auto-add-wrap" class="hidden" style="align-content:end;"><span class="check-pill"><input id="process-auto-add-cones" type="checkbox" checked /><span>Auto add cones to inventory</span></span></label>
+            </div>
+            <p id="process-stock-hint" class="tiny muted">Available for process input: 0.00 kg • 0.00 bags</p>
+            <div class="card" style="padding:12px; margin-top:8px;">
+              <p id="process-expected-hint" class="tiny muted">Normal loss guidance: Dyeing/Glaze usually 2–5 kg per 100 kg sent. Enter actual received kg from slip.</p>
+            </div>
+            <div class="actions">
+              <button id="save-process-btn" class="btn">Save Process</button>
+              <button id="cancel-process-edit-btn" class="btn secondary hidden" type="button">Cancel Edit</button>
+              <button id="remove-process-btn" class="btn danger hidden" type="button">Remove Entry</button>
+            </div>
+          </div>
+          <div class="card glass">
+            <h3>Recent Process Logs</h3>
+            <div class="grid"><label>Search <input id="process-search" type="text" placeholder="Search process, item, location, vendor" /></label></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>Process</th><th>Input Item</th><th>Output Item</th><th>Location</th><th>Vendor/Mill</th><th>Sent (kg)</th><th>Received (kg)</th><th>Loss (kg)</th><th>Bags Used</th><th>Cones</th><th>Action</th></tr></thead>
+                <tbody id="process-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="transfer" class="hidden section-grid">
+          <div class="card glass">
+            <h3>Transfer Entry</h3>
+            <p class="muted tiny">Required: Item, From, To, Quantity in kg. From must exist; To can be new and will be created automatically.</p>
+            <p id="transfer-edit-hint" class="tiny hidden">Editing mode: transfer stock movement will be recalculated on save.</p>
+            <div class="grid three">
+              <label>Item
+                <select id="transfer-item"><option value="">Select item</option></select>
+              </label>
+              <label>From Location
+                <select id="transfer-from-location"><option value="">Select location</option></select>
+              </label>
+              <label>To Location (type existing or new)
+                <input id="transfer-to-location" type="text" list="location-list" placeholder="Type new branch/location name" />
+              </label>
+              <label>Quantity (kg) <input id="transfer-qty" type="number" min="0" step="1" /></label>
+              <label>Note <input id="transfer-note" type="text" placeholder="Sent for thaika" /></label>
+            </div>
+            <p id="transfer-stock-hint" class="tiny muted">Available at source: 0.00 kg • 0 bags</p>
+            <div class="actions">
+              <button id="save-transfer-btn" class="btn">Save Transfer</button>
+              <button id="cancel-transfer-edit-btn" class="btn secondary hidden" type="button">Cancel Edit</button>
+              <button id="remove-transfer-btn" class="btn danger hidden" type="button">Remove Entry</button>
+            </div>
+          </div>
+          <div class="card glass">
+            <h3>Transfer Status Update</h3>
+            <p id="transfer-status-edit-hint" class="tiny hidden">Update mode: record what happened at destination and save.</p>
+            <div class="grid three">
+              <label>Status
+                <select id="transfer-status">
+                  <option>Sent</option>
+                  <option>Received</option>
+                  <option>Processing</option>
+                  <option>Completed</option>
+                  <option>Returned</option>
+                </select>
+              </label>
+              <label>Received Qty (kg, optional) <input id="transfer-received-kg" type="number" min="0" step="1" /></label>
+              <label>Update Note <input id="transfer-status-note" type="text" placeholder="Received at branch, checked and stored" /></label>
+            </div>
+            <div class="actions">
+              <button id="save-transfer-status-btn" class="btn">Save Status Update</button>
+              <button id="cancel-transfer-status-btn" class="btn secondary hidden" type="button">Cancel Update</button>
+            </div>
+          </div>
+          <div class="card glass">
+            <h3>Transfer Log</h3>
+            <div class="grid"><label>Search <input id="transfer-search" type="text" placeholder="Search item, from, to, note" /></label></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>Item</th><th>From</th><th>To</th><th>Qty (kg)</th><th>Status</th><th>Received (kg)</th><th>Latest Update</th><th>Updated By</th><th>Action</th></tr></thead>
+                <tbody id="transfer-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="sales" class="hidden section-grid">
+          <div class="card glass">
+            <h3>Sales / Dispatch Entry</h3>
+            <p class="muted tiny">Only grey cone, dyed cone, processed yarn shown here.</p>
+            <p id="sale-edit-hint" class="tiny hidden">Editing mode: sale + linked stock/finance will be recalculated on save.</p>
+            <div class="grid three">
+              <label>Item
+                <select id="sale-item"><option value="">Select ready item</option></select>
+              </label>
+              <label>Location
+                <select id="sale-location"><option value="">Select location</option></select>
+              </label>
+              <label>Sold Qty (kg) <input id="sale-qty" type="number" min="0" step="1" /></label>
+              <label id="sale-cones-hint" class="muted tiny" style="align-content:end;">≈ 0 bags</label>
+              <label>Packing
+                <select id="sale-packing"><option selected>Cone</option><option>Bag</option><option>Bundle</option></select>
+              </label>
+              <label>Price / kg <input id="sale-rate" type="number" min="0" step="0.01" /></label>
+              <label>Total (auto) <input id="sale-total" type="number" min="0" step="0.01" readonly /></label>
+              <label>Customer <input id="sale-customer" type="text" placeholder="Customer name" /></label>
+              <label>Invoice <input id="sale-invoice" type="text" placeholder="INV-1001" /></label>
+              <label>Note <input id="sale-note" type="text" placeholder="Dispatch note" /></label>
+            </div>
+            <p id="sale-stock-hint" class="tiny muted">Available for sale: 0.00 kg • 0.00 bags</p>
+            <div class="actions">
+              <button id="save-sale-btn" class="btn">Save Sale</button>
+              <button id="cancel-sale-edit-btn" class="btn secondary hidden" type="button">Cancel Edit</button>
+              <button id="remove-sale-btn" class="btn danger hidden" type="button">Remove Sale</button>
+            </div>
+          </div>
+
+          <div class="card glass">
+            <h3>Sales Log</h3>
+            <div class="grid"><label>Search <input id="sales-search" type="text" placeholder="Search item, location, customer, note" /></label></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>Item</th><th>Location</th><th>Qty (kg)</th><th>Packing</th><th>Price/kg</th><th>Total</th><th>Customer</th><th>Invoice</th><th>Note</th><th>Action</th></tr></thead>
+                <tbody id="sales-table"></tbody>
+              </table>
+            </div>
+          </div>
+
+        </section>
+
+        <section id="finance" class="hidden section-grid">
+
+          <div class="card glass">
+            <h3>Finance Entry</h3>
+            <p class="muted tiny">Required: Type and Amount.</p>
+            <p id="finance-edit-hint" class="tiny hidden">Editing mode: update values and click Save.</p>
+            <div class="grid three">
+              <label>Type
+                <select id="txn-type"><option>Purchase</option><option>Sale</option><option>Expense</option><option>Salary</option></select>
+              </label>
+              <label>Category <input id="txn-category" type="text" placeholder="Yarn Purchase / Wages" /></label>
+              <label>Amount <input id="txn-amount" type="number" min="0" step="0.01" /></label>
+              <label>Reference <input id="txn-ref" type="text" placeholder="Invoice # / Worker batch" /></label>
+            </div>
+            <div class="actions">
+              <button id="save-txn-btn" class="btn">Save Finance</button>
+              <button id="cancel-finance-edit-btn" class="btn secondary hidden" type="button">Cancel Edit</button>
+              <button id="remove-finance-btn" class="btn danger hidden" type="button">Remove Entry</button>
+            </div>
+          </div>
+          <div class="card glass">
+            <h3>Finance Log</h3>
+            <div class="grid"><label>Search <input id="finance-search" type="text" placeholder="Search type, category, amount, reference" /></label></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Amount</th><th>Reference</th><th>Action</th></tr></thead>
+                <tbody id="finance-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="reports" class="hidden section-grid">
+          <div class="card glass">
+            <h3>Operational Reports</h3>
+            <div class="grid three">
+              <label>Location (optional)
+                <input id="report-location" type="text" list="location-list" placeholder="Leave empty for all" />
+              </label>
+              <label>Process
+                <select id="report-process"><option value="All">All</option><option>Dyeing</option><option>Doubling</option><option>Yarn To Cone</option><option>Glaze</option><option>Baby Cone</option><option>Thaika</option></select>
+              </label>
+              <label>From Date <input id="report-from-date" type="date" /></label>
+              <label>To Date <input id="report-to-date" type="date" /></label>
+            </div>
+            <div class="actions"><button id="run-report-btn" class="btn">Generate Report</button></div>
+          </div>
+          <div id="report-output" class="card glass"></div>
+        </section>
+
+        <section id="admin" class="hidden section-grid">
+          <div class="card glass">
+            <h3>Create User</h3>
+            <p class="muted tiny">Create staff login and choose what each user can access.</p>
+            <div class="grid four">
+              <label>Username <input id="new-user-username" type="text" placeholder="staff01" /></label>
+              <label>Password <input id="new-user-password" type="text" placeholder="temp123" /></label>
+              <label>Role
+                <select id="new-user-role"><option>operator</option><option>admin</option></select>
+              </label>
+              <label>Default Access
+                <select id="new-user-template"><option value="operator">Operator Default</option><option value="full">Full Access</option></select>
+              </label>
+            </div>
+            <div class="perm-grid" id="new-user-perms"></div>
+            <div class="actions"><button id="add-user-btn" class="btn">Add User</button></div>
+          </div>
+
+          <div class="card glass">
+            <h3>Manage Permissions</h3>
+            <p class="muted tiny">Toggle access and save per user.</p>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Username</th><th>Role</th><th>Permissions</th><th>Actions</th></tr></thead>
+                <tbody id="users-table"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card glass">
+            <h3>Danger Zone</h3>
+            <p class="muted tiny">Clear complete data (inventory, work logs, transfers, finance, and custom users).</p>
+            <div class="actions">
+              <button id="export-data-btn" class="btn secondary" type="button">Export JSON Backup</button>
+              <button id="import-data-btn" class="btn ghost" type="button">Import JSON Backup</button>
+              <input id="import-data-file" type="file" accept="application/json" class="hidden" />
+              <button id="clear-all-data-btn" class="btn danger" type="button">Clear Complete Data</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <datalist id="location-list"></datalist>
+    <datalist id="item-list"></datalist>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+      const DB_KEY = "yarn_cone_ims_v2_db";
+      const USERS_KEY = "yarn_cone_ims_v2_users";
+      const SESSION_USER_KEY = "yarn_cone_ims_v2_session_user_id";
+      const SUPABASE_URL = "https://roegfbnnhatbaykpcjhr.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvZWdmYm5uaGF0YmF5a3BjamhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzMjMyNjQsImV4cCI6MjA4Nzg5OTI2NH0.7F9Cp1Gc_1h-lv6kqkUpfexnlqSo17HCgTBEPd-HO8c";
+      const REMOTE_STATE_ID = "main";
+      const BAG_WEIGHT_KG = 20;
+      const BAG_AVG_WARN_RATIO = 0.2;
+      const MODULES = ["dashboard", "inventory", "process", "transfer", "sales", "finance", "reports", "admin"];
+      const supabaseClient = window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY
+        ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        : null;
+
+      const EMBEDDED_SEED = {
+        users: [
+          {
+            id: "u-admin-1",
+            username: "admin",
+            email: "admin@company.com",
+            password: "admin123",
+            role: "admin",
+            permissions: {
+              dashboard: true,
+              inventory: true,
+              process: true,
+              transfer: true,
+              sales: true,
+              finance: true,
+              reports: true,
+              admin: true
+            }
+          },
+          {
+            id: "u-operator-1",
+            username: "operator",
+            email: "operator@company.com",
+            password: "operator123",
+            role: "operator",
+            permissions: {
+              dashboard: true,
+              inventory: true,
+              process: true,
+              transfer: true,
+              sales: true,
+              finance: true,
+              reports: false,
+              admin: false
+            }
+          }
+        ],
+        inventory: [
+          { id: "inv-1", itemName: "20/1 Yarn", city: "Main Unit", type: "raw", quantityKg: 1200, quantityBags: 60, updatedAt: "2026-03-01T08:00:00.000Z", updatedBy: "seed" },
+          { id: "inv-2", itemName: "20/1 Yarn", city: "Branch Unit", type: "raw", quantityKg: 220, quantityBags: 12, updatedAt: "2026-03-01T08:00:00.000Z", updatedBy: "seed" }
+        ],
+        processEntries: [
+          { id: "proc-1", processType: "Dyeing", processItem: "20/1 Yarn", outputItem: "20/1 Yarn", city: "Main Unit", vendorName: "Al-Madina Mill", qtyInKg: 300, qtyInBags: 15, qtyOutKg: 285, qtyOutBags: 14, lossPct: 5, bagsUsed: 0, conesProduced: 0, autoAddCones: false, createdAt: "2026-03-01T09:00:00.000Z", enteredBy: "seed" },
+          { id: "proc-2", processType: "Yarn To Cone", processItem: "20/1 Yarn", outputItem: "20/1 Yarn", city: "Main Unit", vendorName: "In-House", qtyInKg: 200, qtyInBags: 10, qtyOutKg: 196, qtyOutBags: 10, lossPct: 2, bagsUsed: 23, conesProduced: 420, autoAddCones: true, createdAt: "2026-03-01T10:00:00.000Z", enteredBy: "seed" }
+        ],
+        transfers: [
+          { id: "tr-1", itemName: "20/1 Yarn", fromCity: "Main Unit", toCity: "Branch Unit", qtyKg: 150, qtyBags: 8, note: "For thaika process", createdAt: "2026-03-01T11:00:00.000Z", enteredBy: "seed" }
+        ],
+        salesEntries: [],
+        financeEntries: [
+          { id: "fin-1", entryType: "Purchase", category: "Yarn Purchase", amount: 450000, reference: "PO-1002", createdAt: "2026-03-01T08:30:00.000Z", enteredBy: "seed" },
+          { id: "fin-2", entryType: "Expense", category: "Utility", amount: 18000, reference: "FEB-UTIL", createdAt: "2026-03-01T12:30:00.000Z", enteredBy: "seed" }
+        ]
+      };
+
+      const state = {
+        user: null,
+        editingInventoryId: null,
+        editingProcessId: null,
+        editingTransferId: null,
+        editingSaleId: null,
+        editingFinanceId: null,
+        users: [],
+        db: {
+          inventory: [],
+          processEntries: [],
+          transfers: [],
+          salesEntries: [],
+          financeEntries: []
+        },
+        filters: {
+          inventory: "",
+          process: "",
+          transfer: "",
+          sales: "",
+          finance: ""
+        },
+        lastEdited: {
+          table: "",
+          id: ""
+        },
+        processReceivedManual: false
+      };
+
+      function byId(id) { return document.getElementById(id); }
+      function now() { return new Date().toISOString(); }
+      function fmtDate(value) { return new Date(value).toLocaleString(); }
+      function fmtNum(value, decimals = 2) {
+        const amount = Number(value || 0);
+        if (!Number.isFinite(amount)) return "0";
+        return amount.toLocaleString("en-IN", {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: decimals
+        });
+      }
+      function uid() { return (crypto.randomUUID && crypto.randomUUID()) || String(Math.random()); }
+      function normalizeText(value) { return String(value || "").trim().toLowerCase(); }
+      function cleanText(value) { return String(value || "").trim(); }
+      function normalizeInventoryType(value) {
+        const key = normalizeText(value);
+        if (["raw", "grey_cone", "dyed_cone", "other_processed"].includes(key)) return key;
+        return "raw";
+      }
+      function inferInventoryTypeFromName(itemName, fallbackType = "raw") {
+        const name = normalizeText(itemName);
+        if (name.includes("dyed")) return "dyed_cone";
+        if (name.includes("cone")) return "grey_cone";
+        return normalizeInventoryType(fallbackType);
+      }
+      function inferOutputTypeByProcess(processType, outputItemName) {
+        const processKey = normalizeText(processType);
+        const nameType = inferInventoryTypeFromName(outputItemName, "raw");
+        if (nameType !== "raw") return nameType;
+        if (processKey === "yarn to cone" || processKey === "baby cone") return "grey_cone";
+        if (processKey === "dyeing" || processKey === "glaze") return "dyed_cone";
+        if (processKey === "doubling" || processKey === "thaika") return "other_processed";
+        return "other_processed";
+      }
+      function getInventoryTypeLabel(type) {
+        const key = normalizeInventoryType(type);
+        if (key === "grey_cone") return "Grey Cone";
+        if (key === "dyed_cone") return "Dyed Cone";
+        if (key === "other_processed") return "Other Processed";
+        return "Raw";
+      }
+      function getInventoryTypeClass(type) {
+        const key = normalizeInventoryType(type);
+        if (key === "raw") return "type-pill raw";
+        return "type-pill cone";
+      }
+      function qtyToKg(unit, quantity) { return unit === "bags" ? Number(quantity || 0) * BAG_WEIGHT_KG : Number(quantity || 0); }
+      function qtyToBags(unit, quantity) { return unit === "kg" ? Number(quantity || 0) / BAG_WEIGHT_KG : Number(quantity || 0); }
+      function isDateInRange(isoDate, fromDate, toDate) {
+        const raw = String(isoDate || "");
+        if (!raw) return true;
+        const day = raw.slice(0, 10);
+        if (fromDate && day < fromDate) return false;
+        if (toDate && day > toDate) return false;
+        return true;
+      }
+      function toSearchText(values) { return values.map((value) => String(value || "").toLowerCase()).join(" "); }
+      function markLastEdited(table, id) {
+        state.lastEdited.table = table;
+        state.lastEdited.id = id;
+        clearTimeout(window.__editedRowTimer);
+        window.__editedRowTimer = setTimeout(() => {
+          state.lastEdited.table = "";
+          state.lastEdited.id = "";
+          renderAll();
+        }, 1400);
+      }
+
+      function getProcessTypeMeta(processType) {
+        const type = normalizeText(processType);
+        const isCone = type === "yarn to cone" || type === "baby cone";
+        return { isCone };
+      }
+
+      function showSavedFeedback(button, message) {
+        if (!button) return;
+        const original = button.textContent;
+        button.classList.add("saved");
+        button.textContent = "Saved ✓";
+        setTimeout(() => {
+          button.classList.remove("saved");
+          button.textContent = original;
+        }, 900);
+
+        let toast = byId("save-toast");
+        if (!toast) {
+          toast = document.createElement("div");
+          toast.id = "save-toast";
+          toast.className = "save-toast";
+          document.body.appendChild(toast);
+        }
+        toast.textContent = message || "Entry saved";
+        toast.classList.add("show");
+        clearTimeout(window.__saveToastTimer);
+        window.__saveToastTimer = setTimeout(() => toast.classList.remove("show"), 1200);
+      }
+
+      function defaultPermissions(role) {
+        if (role === "admin") {
+          return { dashboard: true, inventory: true, process: true, transfer: true, sales: true, finance: true, reports: true, admin: true };
+        }
+        return { dashboard: true, inventory: true, process: true, transfer: true, sales: true, finance: true, reports: false, admin: false };
+      }
+
+      function normalizeUser(user) {
+        const perms = Object.assign(defaultPermissions(user.role || "operator"), user.permissions || {});
+        const fallbackUsername = String(user.username || user.email || "")
+          .trim()
+          .toLowerCase()
+          .split("@")[0]
+          .replace(/[^a-z0-9._-]/g, "");
+        return {
+          id: user.id || uid(),
+          username: fallbackUsername || `user_${uid().slice(0, 6)}`,
+          email: user.email || "",
+          password: user.password || "",
+          role: user.role || "operator",
+          permissions: perms
+        };
+      }
+
+      function ensureAdminAccountExists() {
+        let adminUser = state.users.find((user) => normalizeText(user.username) === "admin");
+
+        if (!adminUser) {
+          adminUser = normalizeUser({
+            id: uid(),
+            username: "admin",
+            email: "admin@company.com",
+            password: "admin123",
+            role: "admin",
+            permissions: defaultPermissions("admin")
+          });
+          state.users.push(adminUser);
+        }
+
+        adminUser.role = "admin";
+        adminUser.permissions = defaultPermissions("admin");
+        if (!adminUser.password) adminUser.password = "admin123";
+
+        const hasAnyAdminRole = state.users.some((user) => String(user.role || "").toLowerCase() === "admin");
+        if (!hasAnyAdminRole) {
+          adminUser.role = "admin";
+          adminUser.permissions = defaultPermissions("admin");
+        }
+      }
+
+      async function getSeedData() {
+        try {
+          const response = await fetch("seed-data.json", { cache: "no-store" });
+          if (!response.ok) throw new Error("seed-data.json not reachable");
+          return await response.json();
+        } catch {
+          return EMBEDDED_SEED;
+        }
+      }
+
+      function saveUsers() {
+        persistAppState();
+      }
+
+      function saveDb() {
+        persistAppState();
+      }
+
+      function persistLocalFallback() {
+        localStorage.setItem(USERS_KEY, JSON.stringify(state.users));
+        localStorage.setItem(DB_KEY, JSON.stringify(state.db));
+      }
+
+      async function persistAppState() {
+        if (!supabaseClient) {
+          persistLocalFallback();
+          return;
+        }
+
+        const payload = {
+          id: REMOTE_STATE_ID,
+          users: state.users,
+          db: state.db,
+          updated_at: now()
+        };
+
+        const { error } = await supabaseClient
+          .from("ims_state")
+          .upsert(payload, { onConflict: "id" });
+
+        if (error) {
+          console.error("Supabase save failed, using local fallback:", error.message || error);
+          persistLocalFallback();
+        }
+      }
+
+      function normalizeDbShape(parsed) {
+        return {
+          inventory: (parsed.inventory || []).map((row) => ({
+            ...row,
+            quantityKg: Number(row.quantityKg || 0),
+            quantityBags: Number(row.quantityBags || 0),
+            type: normalizeInventoryType(row.type || inferInventoryTypeFromName(row.itemName || "", "raw"))
+          })),
+          processEntries: (parsed.processEntries || []).map((entry) => ({
+            ...entry,
+            qtyInKg: Number(entry.qtyInKg || 0),
+            qtyOutKg: Number(entry.qtyOutKg || 0),
+            qtyInBags: Number(entry.qtyInBags || 0),
+            qtyOutBags: Number(entry.qtyOutBags || 0),
+            bagsUsed: Number(entry.bagsUsed || 0),
+            lossPct: Number(entry.lossPct || 0),
+            conesProduced: Number(entry.conesProduced || 0),
+            autoAddCones: Boolean(entry.autoAddCones),
+            outputType: normalizeInventoryType(entry.outputType || inferOutputTypeByProcess(entry.processType || "", entry.outputItem || entry.processItem || entry.itemName || ""))
+          })),
+          transfers: (parsed.transfers || []).map((entry) => ({
+            ...entry,
+            qtyKg: Number(entry.qtyKg || 0),
+            qtyBags: Number(entry.qtyBags || 0),
+            itemType: normalizeInventoryType(entry.itemType || inferInventoryTypeFromName(entry.itemName || "", "raw")),
+            status: entry.status || "Sent",
+            receivedKg: Number(entry.receivedKg || 0),
+            statusNote: entry.statusNote || "",
+            statusUpdatedAt: entry.statusUpdatedAt || entry.createdAt || now(),
+            statusUpdatedBy: entry.statusUpdatedBy || entry.enteredBy || ""
+          })),
+          salesEntries: (parsed.salesEntries || []).map((entry) => ({
+            ...entry,
+            qtyKg: Number(entry.qtyKg || 0),
+            qtyBags: Number(entry.qtyBags || 0),
+            packing: cleanText(entry.packing || "Cone") || "Cone",
+            ratePerKg: Number(entry.ratePerKg || 0),
+            amount: Number(entry.amount || 0),
+            invoice: cleanText(entry.invoice || "")
+          })),
+          financeEntries: parsed.financeEntries || []
+        };
+      }
+
+      function loadLocalFallback() {
+        const rawDb = localStorage.getItem(DB_KEY);
+        if (rawDb) {
+          try {
+            state.db = normalizeDbShape(JSON.parse(rawDb));
+          } catch {
+            state.db = { inventory: [], processEntries: [], transfers: [], salesEntries: [], financeEntries: [] };
+          }
+        }
+
+        const rawUsers = localStorage.getItem(USERS_KEY);
+        if (rawUsers) {
+          try {
+            state.users = (JSON.parse(rawUsers) || []).map(normalizeUser);
+          } catch {
+            state.users = [];
+          }
+        }
+      }
+
+      async function loadAppStateFromRemote() {
+        if (!supabaseClient) {
+          loadLocalFallback();
+          return;
+        }
+
+        const { data, error } = await supabaseClient
+          .from("ims_state")
+          .select("id, users, db")
+          .eq("id", REMOTE_STATE_ID)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Supabase load failed, using local fallback:", error.message || error);
+          loadLocalFallback();
+          return;
+        }
+
+        if (!data) {
+          state.users = [];
+          state.db = { inventory: [], processEntries: [], transfers: [], salesEntries: [], financeEntries: [] };
+          return;
+        }
+
+        state.users = (data.users || []).map(normalizeUser);
+        state.db = normalizeDbShape(data.db || {});
+      }
+
+      function loadDb() {
+        state.db = { inventory: [], processEntries: [], transfers: [], salesEntries: [], financeEntries: [] };
+      }
+
+      async function loadUsers() {
+        await loadAppStateFromRemote();
+
+        ensureAdminAccountExists();
+
+        if (state.users.length) return;
+
+        const seed = await getSeedData();
+        state.users = (seed.users || EMBEDDED_SEED.users).map(normalizeUser);
+        saveUsers();
+      }
+
+      async function loadSeedIfEmptyDb() {
+        if (state.db.inventory.length || state.db.processEntries.length || state.db.transfers.length || state.db.salesEntries.length || state.db.financeEntries.length) return;
+        const seed = await getSeedData();
+        state.db = normalizeDbShape(seed);
+        saveDb();
+      }
+
+      function requireAuth() {
+        if (!state.user) {
+          alert("Please login first.");
+          return false;
+        }
+        return true;
+      }
+
+      function enforceCurrentAdminAccess() {
+        if (!state.user) return;
+        const isSystemAdmin = normalizeText(state.user.username) === "admin" || normalizeText(state.user.role) === "admin";
+        if (!isSystemAdmin) return;
+        state.user.role = "admin";
+        state.user.permissions = defaultPermissions("admin");
+      }
+
+      function canAccess(section) {
+        if (!state.user) return false;
+        if (normalizeText(state.user.username) === "admin") return true;
+        if (normalizeText(state.user.role) === "admin") return true;
+        return Boolean(state.user.permissions && state.user.permissions[section]);
+      }
+
+      function applyNavigationPermissions() {
+        enforceCurrentAdminAccess();
+        byId("main-nav").querySelectorAll("button[data-section]").forEach((button) => {
+          const section = button.getAttribute("data-section");
+          button.classList.toggle("hidden", !canAccess(section));
+        });
+      }
+
+      function refreshLocationSuggestions() {
+        const datalist = byId("location-list");
+        if (!datalist) return;
+        const locations = new Set();
+        state.db.inventory.forEach((row) => row.city && locations.add(cleanText(row.city)));
+        state.db.processEntries.forEach((row) => row.city && locations.add(cleanText(row.city)));
+        state.db.salesEntries.forEach((row) => row.city && locations.add(cleanText(row.city)));
+        state.db.transfers.forEach((row) => {
+          row.fromCity && locations.add(cleanText(row.fromCity));
+          row.toCity && locations.add(cleanText(row.toCity));
+        });
+        datalist.innerHTML = Array.from(locations).sort().map((name) => `<option value="${name}"></option>`).join("");
+      }
+
+      function getInventoryLocations() {
+        return Array.from(new Set(state.db.inventory.map((row) => cleanText(row.city)).filter(Boolean))).sort();
+      }
+
+      function getInventoryItems(city) {
+        const normalizedCity = normalizeText(city);
+        const rows = normalizedCity
+          ? state.db.inventory.filter((row) => normalizeText(row.city) === normalizedCity)
+          : state.db.inventory;
+        return Array.from(new Set(rows.map((row) => cleanText(row.itemName)).filter(Boolean))).sort();
+      }
+
+      function refreshProcessLocationOptions() {
+        const select = byId("process-location");
+        if (!select) return;
+        const locations = getInventoryLocations();
+        const current = select.value;
+        select.innerHTML = `<option value="">Select location</option>${locations.map((name) => `<option value="${name}">${name}</option>`).join("")}`;
+        if (current && locations.some((name) => normalizeText(name) === normalizeText(current))) {
+          select.value = current;
+        }
+      }
+
+      function refreshProcessItemOptions() {
+        const select = byId("process-item");
+        if (!select) return;
+        const city = cleanText(byId("process-location")?.value);
+        const items = getInventoryItems(city);
+        const current = select.value;
+        select.innerHTML = `<option value="">Select item</option>${items.map((name) => `<option value="${name}">${name}</option>`).join("")}`;
+        if (current && items.some((name) => normalizeText(name) === normalizeText(current))) {
+          select.value = current;
+        }
+      }
+
+      function ensureProcessOption(selectId, value) {
+        const select = byId(selectId);
+        const cleanValue = cleanText(value);
+        if (!select || !cleanValue) return;
+        const exists = Array.from(select.options).some((opt) => normalizeText(opt.value) === normalizeText(cleanValue));
+        if (!exists) {
+          const option = document.createElement("option");
+          option.value = cleanValue;
+          option.textContent = `${cleanValue} (legacy)`;
+          select.appendChild(option);
+        }
+        select.value = cleanValue;
+      }
+
+      function hasInventoryLocation(city) {
+        const normalized = normalizeText(city);
+        if (!normalized) return false;
+        return getInventoryLocations().some((name) => normalizeText(name) === normalized);
+      }
+
+      function refreshTransferLocationOptions() {
+        const locations = getInventoryLocations();
+        const fromSelect = byId("transfer-from-location");
+        if (fromSelect) {
+          const current = fromSelect.value;
+          fromSelect.innerHTML = `<option value="">Select location</option>${locations.map((name) => `<option value="${name}">${name}</option>`).join("")}`;
+          if (current && locations.some((name) => normalizeText(name) === normalizeText(current))) {
+            fromSelect.value = current;
+          }
+        }
+      }
+
+      function ensureTransferLocationOption(selectId, value) {
+        const select = byId(selectId);
+        const cleanValue = cleanText(value);
+        if (!select || !cleanValue) return;
+        const exists = Array.from(select.options).some((opt) => normalizeText(opt.value) === normalizeText(cleanValue));
+        if (!exists) {
+          const option = document.createElement("option");
+          option.value = cleanValue;
+          option.textContent = `${cleanValue} (legacy)`;
+          select.appendChild(option);
+        }
+        select.value = cleanValue;
+      }
+
+      function getTransferToCityValue() {
+        return cleanText(byId("transfer-to-location")?.value);
+      }
+
+      function refreshTransferItemOptions() {
+        const select = byId("transfer-item");
+        if (!select) return;
+        const fromCity = cleanText(byId("transfer-from-location")?.value);
+        const items = getInventoryItems(fromCity);
+        const current = select.value;
+        select.innerHTML = `<option value="">Select item</option>${items.map((name) => `<option value="${name}">${name}</option>`).join("")}`;
+        if (current && items.some((name) => normalizeText(name) === normalizeText(current))) {
+          select.value = current;
+        }
+      }
+
+      function isSaleReadyInventoryRow(row) {
+        const key = normalizeInventoryType(row?.type);
+        const allowed = ["grey_cone", "dyed_cone", "other_processed"];
+        return Number(row?.quantityKg || 0) > 0 && allowed.includes(key);
+      }
+
+      function isSaleReadyItemAtLocation(itemName, city) {
+        return state.db.inventory.some((row) => {
+          return isSaleReadyInventoryRow(row)
+            && normalizeText(row.itemName) === normalizeText(itemName)
+            && normalizeText(row.city) === normalizeText(city);
+        });
+      }
+
+      function getSaleReadyItems() {
+        return Array.from(new Set(
+          state.db.inventory
+            .filter((row) => isSaleReadyInventoryRow(row))
+            .map((row) => cleanText(row.itemName))
+            .filter(Boolean)
+        )).sort();
+      }
+
+      function getSaleReadyLocations(itemName) {
+        return Array.from(new Set(
+          state.db.inventory
+            .filter((row) => {
+              if (!isSaleReadyInventoryRow(row)) return false;
+              if (!itemName) return true;
+              return normalizeText(row.itemName) === normalizeText(itemName);
+            })
+            .map((row) => cleanText(row.city))
+            .filter(Boolean)
+        )).sort();
+      }
+
+      function refreshSaleItemOptions() {
+        const select = byId("sale-item");
+        if (!select) return;
+        const current = cleanText(select.value);
+        const items = getSaleReadyItems();
+        select.innerHTML = `<option value="">Select ready item</option>${items.map((name) => `<option value="${name}">${name}</option>`).join("")}`;
+        if (current && items.some((name) => normalizeText(name) === normalizeText(current))) {
+          select.value = current;
+        }
+      }
+
+      function ensureSaleOption(selectId, value) {
+        const select = byId(selectId);
+        const cleanValue = cleanText(value);
+        if (!select || !cleanValue) return;
+        const exists = Array.from(select.options).some((opt) => normalizeText(opt.value) === normalizeText(cleanValue));
+        if (!exists) {
+          const option = document.createElement("option");
+          option.value = cleanValue;
+          option.textContent = `${cleanValue} (legacy)`;
+          select.appendChild(option);
+        }
+        select.value = cleanValue;
+      }
+
+      function refreshSaleLocationOptions() {
+        const select = byId("sale-location");
+        if (!select) return;
+        const itemName = cleanText(byId("sale-item")?.value);
+        const current = cleanText(select.value);
+        const locations = getSaleReadyLocations(itemName);
+        select.innerHTML = `<option value="">Select location</option>${locations.map((name) => `<option value="${name}">${name}</option>`).join("")}`;
+        if (current && locations.some((name) => normalizeText(name) === normalizeText(current))) {
+          select.value = current;
+        }
+      }
+
+      function ensureTransferItemOption(value) {
+        const select = byId("transfer-item");
+        const cleanValue = cleanText(value);
+        if (!select || !cleanValue) return;
+        const exists = Array.from(select.options).some((opt) => normalizeText(opt.value) === normalizeText(cleanValue));
+        if (!exists) {
+          const option = document.createElement("option");
+          option.value = cleanValue;
+          option.textContent = `${cleanValue} (legacy)`;
+          select.appendChild(option);
+        }
+        select.value = cleanValue;
+      }
+
+      function applyKgInputBehavior(qtyInputId, getMaxValue, onQtyChange) {
+        const qtyInput = byId(qtyInputId);
+        if (!qtyInput) return;
+
+        const apply = () => {
+          qtyInput.step = "1";
+          qtyInput.placeholder = "Enter kg";
+
+          if (typeof getMaxValue === "function") {
+            const maxValue = Number(getMaxValue() || 0);
+            if (maxValue > 0) {
+              qtyInput.max = String(Math.floor(maxValue));
+            } else {
+              qtyInput.removeAttribute("max");
+            }
+          }
+
+          if (typeof onQtyChange === "function") onQtyChange();
+        };
+
+        qtyInput.addEventListener("input", () => {
+          if (typeof onQtyChange === "function") onQtyChange();
+        });
+        apply();
+      }
+
+      function updateTransferQuantityMax() {
+        const itemName = cleanText(byId("transfer-item")?.value);
+        const fromCity = cleanText(byId("transfer-from-location")?.value);
+        const row = itemName && fromCity ? findInventoryRow(itemName, fromCity) : null;
+        const qtyInput = byId("transfer-qty");
+        if (!qtyInput) return;
+        const maxValue = row ? Number(row.quantityKg || 0) : 0;
+        if (maxValue > 0) {
+          qtyInput.max = String(Math.floor(maxValue));
+        } else {
+          qtyInput.removeAttribute("max");
+        }
+      }
+
+      function updateProcessInputMax() {
+        const itemName = cleanText(byId("process-item")?.value);
+        const city = cleanText(byId("process-location")?.value);
+        const row = itemName && city ? findInventoryRow(itemName, city) : null;
+        const qtyInput = byId("process-sent-kg");
+        if (!qtyInput) return;
+        const maxValue = row ? Number(row.quantityKg || 0) : 0;
+        if (maxValue > 0) {
+          qtyInput.max = String(Math.floor(maxValue));
+        } else {
+          qtyInput.removeAttribute("max");
+        }
+      }
+
+      function updateProcessTypeFields() {
+        const processType = byId("process-type")?.value || "";
+        const meta = getProcessTypeMeta(processType);
+        byId("cones-produced-wrap")?.classList.toggle("hidden", !meta.isCone);
+        byId("cones-auto-add-wrap")?.classList.toggle("hidden", !meta.isCone);
+      }
+
+      function getExpectedProcessReceivedKg(processType, sentKg) {
+        const sent = Number(sentKg || 0);
+        if (sent <= 0) return 0;
+        const key = normalizeText(processType);
+        if (key === "yarn to cone" || key === "baby cone") return sent * 0.99;
+        if (key === "dyeing" || key === "glaze") return sent * 0.97;
+        return sent * 0.98;
+      }
+
+      function recalculateProcessOutputFromLoss() {
+        const sentInput = byId("process-sent-kg");
+        const receivedInput = byId("process-received-kg");
+        if (!sentInput || !receivedInput) return;
+        const sentKg = Number(sentInput.value || 0);
+        const expected = getExpectedProcessReceivedKg(byId("process-type")?.value || "", sentKg);
+        if (!state.processReceivedManual) {
+          receivedInput.value = expected > 0 ? String(Math.round(expected)) : "";
+        }
+        const hint = byId("process-expected-hint");
+        if (hint) {
+          hint.textContent = sentKg > 0
+            ? `Expected received around ${fmtNum(expected)} kg for ${fmtNum(sentKg)} kg sent. Enter actual received from weighing slip.`
+            : "Normal loss guidance: Dyeing/Glaze usually 2–5 kg per 100 kg sent. Enter actual received kg from slip.";
+        }
+      }
+
+      function refreshItemSuggestions() {
+        const datalist = byId("item-list");
+        if (!datalist) return;
+        const items = new Set();
+        state.db.inventory.forEach((row) => row.itemName && items.add(cleanText(row.itemName)));
+        state.db.salesEntries.forEach((row) => row.itemName && items.add(cleanText(row.itemName)));
+        state.db.processEntries.forEach((row) => {
+          row.processItem && items.add(cleanText(row.processItem));
+          row.outputItem && items.add(cleanText(row.outputItem));
+        });
+        datalist.innerHTML = Array.from(items).sort().map((name) => `<option value="${name}"></option>`).join("");
+      }
+
+      function findInventoryRow(itemName, city) {
+        return state.db.inventory.find(
+          (item) => normalizeText(item.itemName) === normalizeText(itemName) && normalizeText(item.city) === normalizeText(city)
+        );
+      }
+
+      function addInventoryStock(itemName, city, qtyKgDelta, qtyBagsDelta, updatedBy, type) {
+        const row = findInventoryRow(itemName, city);
+        if (row) {
+          row.quantityKg = Number(row.quantityKg || 0) + Number(qtyKgDelta || 0);
+          row.quantityBags = Number(row.quantityBags || 0) + Number(qtyBagsDelta || 0);
+          if (type) row.type = normalizeInventoryType(type);
+          row.updatedAt = now();
+          row.updatedBy = updatedBy;
+          return row;
+        }
+
+        const newRow = {
+          id: uid(),
+          itemName,
+          city,
+          quantityKg: Number(qtyKgDelta || 0),
+          quantityBags: Number(qtyBagsDelta || 0),
+          type: normalizeInventoryType(type || inferInventoryTypeFromName(itemName || "", "raw")),
+          updatedAt: now(),
+          updatedBy: updatedBy
+        };
+        state.db.inventory.push(newRow);
+        return newRow;
+      }
+
+      function setSection(sectionId) {
+        MODULES.forEach((id) => byId(id).classList.toggle("hidden", id !== sectionId));
+        byId("main-nav").querySelectorAll("button[data-section]").forEach((button) => {
+          button.classList.toggle("active", button.getAttribute("data-section") === sectionId);
+        });
+        if (sectionId === "dashboard") renderDashboard();
+      }
+
+      function setInventoryEditMode(row) {
+        if (!row) return;
+        state.editingInventoryId = row.id;
+        byId("item-name").value = row.itemName || "";
+        byId("item-location").value = row.city || "";
+        byId("item-type").value = normalizeInventoryType(row.type || inferInventoryTypeFromName(row.itemName || "", "raw"));
+        byId("item-qty").value = Number(row.quantityKg || 0);
+        byId("inventory-edit-hint").classList.remove("hidden");
+        byId("cancel-item-edit-btn").classList.remove("hidden");
+        byId("remove-item-btn").classList.remove("hidden");
+        byId("save-item-btn").textContent = "Update Inventory";
+      }
+
+      function clearInventoryEditMode() {
+        state.editingInventoryId = null;
+        byId("inventory-edit-hint").classList.add("hidden");
+        byId("cancel-item-edit-btn").classList.add("hidden");
+        byId("remove-item-btn").classList.add("hidden");
+        byId("save-item-btn").textContent = "Save Inventory";
+        byId("item-name").value = "";
+        byId("item-location").value = "";
+        byId("item-type").value = "raw";
+        byId("item-qty").value = "";
+      }
+
+      function getProcessShape(entry) {
+        const processItem = cleanText(entry.processItem || entry.itemName || "");
+        const outputItem = cleanText(entry.outputItem || entry.processItem || entry.itemName || "");
+        const outputType = normalizeInventoryType(entry.outputType || inferOutputTypeByProcess(entry.processType || "", outputItem));
+        const city = cleanText(entry.city || "");
+        const qtyInKg = Number(entry.qtyInKg || 0);
+        const qtyInBags = Number(entry.qtyInBags || 0);
+        const qtyOutKg = Number(entry.qtyOutKg || 0);
+        const qtyOutBags = Number(entry.qtyOutBags || 0);
+        const conesProduced = Number(entry.conesProduced || 0);
+        const autoAddCones = Boolean(entry.autoAddCones);
+        const coneItemName = `${outputItem || processItem} Cones`;
+        return { processItem, outputItem, outputType, city, qtyInKg, qtyInBags, qtyOutKg, qtyOutBags, conesProduced, autoAddCones, coneItemName };
+      }
+
+      function canApplyProcessImpact(entry, direction) {
+        const shape = getProcessShape(entry);
+        const checks = [
+          { item: shape.processItem, city: shape.city, delta: direction === 1 ? -shape.qtyInKg : shape.qtyInKg },
+          { item: shape.outputItem, city: shape.city, delta: direction === 1 ? shape.qtyOutKg : -shape.qtyOutKg },
+          { item: shape.processItem, city: shape.city, deltaBags: direction === 1 ? -shape.qtyInBags : shape.qtyInBags },
+          { item: shape.outputItem, city: shape.city, deltaBags: direction === 1 ? shape.qtyOutBags : -shape.qtyOutBags }
+        ];
+
+        if (shape.autoAddCones && shape.conesProduced > 0) {
+          checks.push({ item: shape.coneItemName, city: shape.city, deltaBags: direction === 1 ? shape.conesProduced : -shape.conesProduced });
+        }
+
+        for (const check of checks) {
+          if (!check.item || !check.city) continue;
+          const row = findInventoryRow(check.item, check.city);
+          if (check.delta < 0 && (!row || Number(row.quantityKg || 0) < Math.abs(check.delta))) return false;
+          if (check.deltaBags < 0 && (!row || Number(row.quantityBags || 0) < Math.abs(check.deltaBags))) return false;
+        }
+        return true;
+      }
+
+      function applyProcessImpact(entry, direction, updatedBy) {
+        const shape = getProcessShape(entry);
+        addInventoryStock(
+          shape.processItem,
+          shape.city,
+          direction === 1 ? -shape.qtyInKg : shape.qtyInKg,
+          direction === 1 ? -shape.qtyInBags : shape.qtyInBags,
+          updatedBy
+        );
+        addInventoryStock(
+          shape.outputItem,
+          shape.city,
+          direction === 1 ? shape.qtyOutKg : -shape.qtyOutKg,
+          direction === 1 ? shape.qtyOutBags : -shape.qtyOutBags,
+          updatedBy,
+          shape.outputType
+        );
+
+        if (shape.autoAddCones && shape.conesProduced > 0) {
+          addInventoryStock(
+            shape.coneItemName,
+            shape.city,
+            0,
+            direction === 1 ? shape.conesProduced : -shape.conesProduced,
+            updatedBy
+          );
+        }
+      }
+
+      function setProcessEditMode(entry) {
+        if (!entry) return;
+        state.editingProcessId = entry.id;
+        ensureProcessOption("process-location", entry.city || "");
+        refreshProcessItemOptions();
+        ensureProcessOption("process-item", entry.processItem || entry.itemName || "");
+        byId("process-output-item").value = entry.outputItem || entry.processItem || entry.itemName || "";
+        byId("process-type").value = entry.processType || "Dyeing";
+        byId("process-vendor").value = entry.vendorName || "";
+        byId("process-sent-kg").value = Number(entry.qtyInKg || 0);
+        byId("process-received-kg").value = Number(entry.qtyOutKg || 0);
+        byId("process-cones").value = Number(entry.conesProduced || 0);
+        byId("process-auto-add-cones").checked = Boolean(entry.autoAddCones);
+        state.processReceivedManual = true;
+        updateProcessTypeFields();
+        recalculateProcessOutputFromLoss();
+        updateProcessStockHint();
+        byId("process-edit-hint").classList.remove("hidden");
+        byId("cancel-process-edit-btn").classList.remove("hidden");
+        byId("remove-process-btn").classList.remove("hidden");
+        byId("save-process-btn").textContent = "Update Process";
+      }
+
+      function clearProcessEditMode() {
+        state.editingProcessId = null;
+        byId("process-edit-hint").classList.add("hidden");
+        byId("cancel-process-edit-btn").classList.add("hidden");
+        byId("remove-process-btn").classList.add("hidden");
+        byId("save-process-btn").textContent = "Save Process";
+        byId("process-item").value = "";
+        byId("process-output-item").value = "";
+        byId("process-location").value = "";
+        byId("process-vendor").value = "";
+        byId("process-sent-kg").value = "";
+        byId("process-received-kg").value = "";
+        byId("process-cones").value = "0";
+        byId("process-auto-add-cones").checked = true;
+        state.processReceivedManual = false;
+        updateProcessTypeFields();
+        recalculateProcessOutputFromLoss();
+        refreshProcessItemOptions();
+        updateProcessStockHint();
+      }
+
+      function getTransferShape(entry) {
+        const sourceRow = findInventoryRow(entry.itemName || "", entry.fromCity || "");
+        return {
+          itemName: cleanText(entry.itemName || ""),
+          fromCity: cleanText(entry.fromCity || ""),
+          toCity: cleanText(entry.toCity || ""),
+          qtyKg: Number(entry.qtyKg || 0),
+          qtyBags: Number(entry.qtyBags || 0),
+          itemType: normalizeInventoryType(entry.itemType || sourceRow?.type || inferInventoryTypeFromName(entry.itemName || "", "raw"))
+        };
+      }
+
+      function canApplyTransferImpact(entry, direction) {
+        const shape = getTransferShape(entry);
+        const checks = [
+          { item: shape.itemName, city: shape.fromCity, delta: direction === 1 ? -shape.qtyKg : shape.qtyKg },
+          { item: shape.itemName, city: shape.toCity, delta: direction === 1 ? shape.qtyKg : -shape.qtyKg },
+          { item: shape.itemName, city: shape.fromCity, deltaBags: direction === 1 ? -shape.qtyBags : shape.qtyBags },
+          { item: shape.itemName, city: shape.toCity, deltaBags: direction === 1 ? shape.qtyBags : -shape.qtyBags }
+        ];
+
+        for (const check of checks) {
+          if (!check.item || !check.city) continue;
+          const row = findInventoryRow(check.item, check.city);
+          if (check.delta < 0 && (!row || Number(row.quantityKg || 0) < Math.abs(check.delta))) return false;
+          if (check.deltaBags < 0 && (!row || Number(row.quantityBags || 0) < Math.abs(check.deltaBags))) return false;
+        }
+
+        return true;
+      }
+
+      function applyTransferImpact(entry, direction, updatedBy) {
+        const shape = getTransferShape(entry);
+        addInventoryStock(
+          shape.itemName,
+          shape.fromCity,
+          direction === 1 ? -shape.qtyKg : shape.qtyKg,
+          direction === 1 ? -shape.qtyBags : shape.qtyBags,
+          updatedBy
+        );
+        addInventoryStock(
+          shape.itemName,
+          shape.toCity,
+          direction === 1 ? shape.qtyKg : -shape.qtyKg,
+          direction === 1 ? shape.qtyBags : -shape.qtyBags,
+          updatedBy,
+          shape.itemType
+        );
+      }
+
+      function getSaleShape(entry) {
+        return {
+          itemName: cleanText(entry.itemName || ""),
+          city: cleanText(entry.city || ""),
+          qtyKg: Number(entry.qtyKg || 0),
+          qtyBags: Number(entry.qtyBags || 0)
+        };
+      }
+
+      function canApplySaleImpact(entry, direction) {
+        const shape = getSaleShape(entry);
+        if (!shape.itemName || !shape.city) return false;
+        const row = findInventoryRow(shape.itemName, shape.city);
+        if (direction === 1) {
+          if (!row) return false;
+          return Number(row.quantityKg || 0) >= shape.qtyKg && Number(row.quantityBags || 0) >= shape.qtyBags;
+        }
+        return true;
+      }
+
+      function applySaleImpact(entry, direction, updatedBy) {
+        const shape = getSaleShape(entry);
+        addInventoryStock(
+          shape.itemName,
+          shape.city,
+          direction === 1 ? -shape.qtyKg : shape.qtyKg,
+          direction === 1 ? -shape.qtyBags : shape.qtyBags,
+          updatedBy
+        );
+      }
+
+      function buildSaleFinanceReference(entry) {
+        const detailParts = [];
+        if (entry.invoice) detailParts.push(`INV:${entry.invoice}`);
+        if (entry.packing) detailParts.push(`Pack:${entry.packing}`);
+        if (entry.customer) detailParts.push(entry.customer);
+        if (entry.note) detailParts.push(entry.note);
+        const detail = detailParts.length ? ` • ${detailParts.join(" | ")}` : "";
+        return `Dispatch ${entry.itemName} ${fmtNum(entry.qtyKg)} kg${detail}`;
+      }
+
+      function upsertLinkedSaleFinanceEntry(saleEntry) {
+        if (!saleEntry.financeEntryId) saleEntry.financeEntryId = uid();
+        const payload = {
+          id: saleEntry.financeEntryId,
+          entryType: "Sale",
+          category: "Sales / Dispatch",
+          amount: Number(saleEntry.amount || 0),
+          reference: buildSaleFinanceReference(saleEntry),
+          createdAt: saleEntry.createdAt,
+          enteredBy: saleEntry.enteredBy,
+          saleEntryId: saleEntry.id
+        };
+
+        const existing = state.db.financeEntries.find((row) => row.id === saleEntry.financeEntryId)
+          || state.db.financeEntries.find((row) => row.entryType === "Sale" && row.saleEntryId === saleEntry.id);
+        if (existing) {
+          Object.assign(existing, payload);
+          return existing.id;
+        }
+
+        state.db.financeEntries.unshift(payload);
+        return payload.id;
+      }
+
+      function removeLinkedSaleFinanceEntry(saleEntry) {
+        state.db.financeEntries = state.db.financeEntries.filter((row) => {
+          if (row.id === saleEntry.financeEntryId) return false;
+          if (row.entryType === "Sale" && row.saleEntryId === saleEntry.id) return false;
+          return true;
+        });
+      }
+
+      function updateTransferStockHint() {
+        const itemName = cleanText(byId("transfer-item")?.value);
+        const fromCity = cleanText(byId("transfer-from-location")?.value);
+        const row = itemName && fromCity ? findInventoryRow(itemName, fromCity) : null;
+        const qty = row ? Number(row.quantityKg || 0) : 0;
+        const bags = row ? Number(row.quantityBags || 0) : 0;
+        const hint = byId("transfer-stock-hint");
+        if (hint) hint.textContent = `Available at source: ${fmtNum(qty)} kg • ${fmtNum(bags)} bags | Max transferable: ${fmtNum(qty)} kg`;
+        updateTransferQuantityMax();
+      }
+
+      function updateProcessStockHint() {
+        const itemName = cleanText(byId("process-item")?.value);
+        const city = cleanText(byId("process-location")?.value);
+        const row = itemName && city ? findInventoryRow(itemName, city) : null;
+        const qty = row ? Number(row.quantityKg || 0) : 0;
+        const bags = row ? Number(row.quantityBags || 0) : 0;
+        const hint = byId("process-stock-hint");
+        if (hint) hint.textContent = `Available for process input: ${fmtNum(qty)} kg • ${fmtNum(bags)} bags | Max send: ${fmtNum(qty)} kg`;
+        updateProcessInputMax();
+      }
+
+      function updateSaleStockHint() {
+        const itemName = cleanText(byId("sale-item")?.value);
+        const city = cleanText(byId("sale-location")?.value);
+        const row = itemName && city ? findInventoryRow(itemName, city) : null;
+        const qty = row ? Number(row.quantityKg || 0) : 0;
+        const bags = row ? Number(row.quantityBags || 0) : 0;
+        const hint = byId("sale-stock-hint");
+        if (hint) hint.textContent = `Available for sale: ${fmtNum(qty)} kg • ${fmtNum(bags)} bags | Max dispatch: ${fmtNum(qty)} kg`;
+
+        const qtyInput = byId("sale-qty");
+        if (qtyInput) {
+          if (qty > 0) qtyInput.max = String(Math.floor(qty));
+          else qtyInput.removeAttribute("max");
+        }
+
+        const conesHint = byId("sale-cones-hint");
+        if (conesHint) {
+          const qtyKg = Number(byId("sale-qty")?.value || 0);
+          const approxBags = qtyKg / BAG_WEIGHT_KG;
+          conesHint.textContent = `≈ ${fmtNum(approxBags, 2)} bags`;
+        }
+      }
+
+      function updateSaleComputedValues() {
+        const qtyKg = Number(byId("sale-qty")?.value || 0);
+        const ratePerKg = Number(byId("sale-rate")?.value || 0);
+        const total = qtyKg * ratePerKg;
+        const totalInput = byId("sale-total");
+        if (totalInput) totalInput.value = total > 0 ? total.toFixed(2) : "";
+      }
+
+      function setTransferEditMode(entry) {
+        if (!entry) return;
+        state.editingTransferId = entry.id;
+        ensureTransferLocationOption("transfer-from-location", entry.fromCity || "");
+        byId("transfer-to-location").value = entry.toCity || "";
+
+        refreshTransferItemOptions();
+        ensureTransferItemOption(entry.itemName || "");
+        byId("transfer-qty").value = Number(entry.qtyKg || 0);
+        byId("transfer-note").value = entry.note || "";
+        byId("transfer-status").value = entry.status || "Sent";
+        byId("transfer-received-kg").value = Number(entry.receivedKg || 0) || "";
+        byId("transfer-status-note").value = entry.statusNote || entry.note || "";
+        byId("transfer-edit-hint").classList.remove("hidden");
+        byId("transfer-status-edit-hint").classList.remove("hidden");
+        byId("cancel-transfer-edit-btn").classList.remove("hidden");
+        byId("cancel-transfer-status-btn").classList.remove("hidden");
+        byId("remove-transfer-btn").classList.remove("hidden");
+        byId("save-transfer-btn").textContent = "Update Transfer";
+      }
+
+      function clearTransferEditMode() {
+        state.editingTransferId = null;
+        byId("transfer-edit-hint").classList.add("hidden");
+        byId("transfer-status-edit-hint").classList.add("hidden");
+        byId("cancel-transfer-edit-btn").classList.add("hidden");
+        byId("cancel-transfer-status-btn").classList.add("hidden");
+        byId("remove-transfer-btn").classList.add("hidden");
+        byId("save-transfer-btn").textContent = "Save Transfer";
+        byId("transfer-item").value = "";
+        byId("transfer-from-location").value = "";
+        byId("transfer-to-location").value = "";
+        byId("transfer-qty").value = "";
+        byId("transfer-note").value = "";
+        byId("transfer-status").value = "Sent";
+        byId("transfer-received-kg").value = "";
+        byId("transfer-status-note").value = "";
+      }
+
+      function setSaleEditMode(entry) {
+        if (!entry) return;
+        state.editingSaleId = entry.id;
+        refreshSaleItemOptions();
+        ensureSaleOption("sale-item", entry.itemName || "");
+        refreshSaleLocationOptions();
+        ensureSaleOption("sale-location", entry.city || "");
+        byId("sale-item").value = entry.itemName || "";
+        byId("sale-location").value = entry.city || "";
+        byId("sale-qty").value = Number(entry.qtyKg || 0);
+        byId("sale-packing").value = entry.packing || "Cone";
+        byId("sale-rate").value = Number(entry.ratePerKg || 0);
+        byId("sale-customer").value = entry.customer || "";
+        byId("sale-invoice").value = entry.invoice || "";
+        byId("sale-note").value = entry.note || "";
+        byId("sale-edit-hint").classList.remove("hidden");
+        byId("cancel-sale-edit-btn").classList.remove("hidden");
+        byId("remove-sale-btn").classList.remove("hidden");
+        byId("save-sale-btn").textContent = "Update Sale";
+        updateSaleStockHint();
+        updateSaleComputedValues();
+      }
+
+      function clearSaleEditMode() {
+        state.editingSaleId = null;
+        byId("sale-edit-hint").classList.add("hidden");
+        byId("cancel-sale-edit-btn").classList.add("hidden");
+        byId("remove-sale-btn").classList.add("hidden");
+        byId("save-sale-btn").textContent = "Save Sale";
+        byId("sale-item").value = "";
+        byId("sale-location").value = "";
+        byId("sale-qty").value = "";
+        byId("sale-packing").value = "Cone";
+        byId("sale-rate").value = "";
+        byId("sale-total").value = "";
+        byId("sale-customer").value = "";
+        byId("sale-invoice").value = "";
+        byId("sale-note").value = "";
+        refreshSaleItemOptions();
+        refreshSaleLocationOptions();
+        updateSaleStockHint();
+      }
+
+      function setFinanceEditMode(entry) {
+        if (!entry) return;
+        state.editingFinanceId = entry.id;
+        byId("txn-type").value = entry.entryType || "Purchase";
+        byId("txn-category").value = entry.category || "";
+        byId("txn-amount").value = Number(entry.amount || 0);
+        byId("txn-ref").value = entry.reference || "";
+        byId("finance-edit-hint").classList.remove("hidden");
+        byId("cancel-finance-edit-btn").classList.remove("hidden");
+        byId("remove-finance-btn").classList.remove("hidden");
+        byId("save-txn-btn").textContent = "Update Finance";
+      }
+
+      function clearFinanceEditMode() {
+        state.editingFinanceId = null;
+        byId("finance-edit-hint").classList.add("hidden");
+        byId("cancel-finance-edit-btn").classList.add("hidden");
+        byId("remove-finance-btn").classList.add("hidden");
+        byId("save-txn-btn").textContent = "Save Finance";
+        byId("txn-type").value = "Purchase";
+        byId("txn-category").value = "";
+        byId("txn-amount").value = "";
+        byId("txn-ref").value = "";
+      }
+
+      function bindEnterFlow(fieldIds, saveButtonId) {
+        const fields = fieldIds.map((id) => byId(id)).filter(Boolean);
+        const saveButton = byId(saveButtonId);
+        if (!fields.length || !saveButton) return;
+
+        const isFocusableField = (field) => {
+          if (!field || field.disabled) return false;
+          if (field.offsetParent === null) return false;
+          return true;
+        };
+
+        const getNextFocusable = (startIndex) => {
+          for (let index = startIndex; index < fields.length; index += 1) {
+            if (isFocusableField(fields[index])) return fields[index];
+          }
+          return null;
+        };
+
+        fields.forEach((field, index) => {
+          field.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter") return;
+            if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+            event.preventDefault();
+
+            const nextField = getNextFocusable(index + 1);
+            if (nextField) {
+              nextField.focus();
+              if (typeof nextField.select === "function" && (nextField.tagName === "INPUT" || nextField.tagName === "TEXTAREA")) {
+                nextField.select();
+              }
+              return;
+            }
+
+            saveButton.click();
+          });
+        });
+      }
+
+      function bindNavigation() {
+        byId("main-nav").querySelectorAll("button[data-section]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const section = btn.getAttribute("data-section");
+            if (!canAccess(section)) {
+              alert("You do not have permission for this module.");
+              return;
+            }
+            setSection(section);
+          });
+        });
+
+        document.querySelectorAll(".jump").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const target = btn.getAttribute("data-target");
+            if (!canAccess(target)) return alert("No permission for this module.");
+            setSection(target);
+          });
+        });
+
+        byId("dashboard-refresh-btn")?.addEventListener("click", () => {
+          renderDashboard();
+          showSavedFeedback(byId("dashboard-refresh-btn"), "Dashboard refreshed");
+        });
+      }
+
+      function getSalesRows() {
+        return state.db.salesEntries || state.db.sales || [];
+      }
+
+      function getTotalStock() {
+        return state.db.inventory.reduce((sum, row) => sum + (Number(row.kg ?? row.quantityKg) || 0), 0);
+      }
+
+      function getStockByType() {
+        const types = { raw: 0, grey_cone: 0, dyed_cone: 0, other_processed: 0 };
+        state.db.inventory.forEach((row) => {
+          const typeKey = normalizeInventoryType(row.type || "raw");
+          if (types[typeKey] !== undefined) {
+            types[typeKey] += Number(row.kg ?? row.quantityKg) || 0;
+          }
+        });
+        return types;
+      }
+
+      function getSellableStock() {
+        return state.db.inventory
+          .filter((row) => {
+            const kg = Number(row.kg ?? row.quantityKg) || 0;
+            const typeKey = normalizeInventoryType(row.type || "raw");
+            return kg > 0 && ["grey_cone", "dyed_cone", "other_processed"].includes(typeKey);
+          })
+          .reduce((sum, row) => sum + (Number(row.kg ?? row.quantityKg) || 0), 0);
+      }
+
+      function getRecentActivity(days = 1) {
+        const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+        const processes = state.db.processEntries.filter((entry) => new Date(entry.createdAt) >= since);
+        const sales = getSalesRows().filter((sale) => new Date(sale.createdAt) >= since);
+
+        const inputKg = processes.reduce((sum, process) => sum + (Number(process.inputKg ?? process.qtyInKg) || 0), 0);
+        const outputKg = processes.reduce((sum, process) => sum + (Number(process.outputKg ?? process.qtyOutKg) || 0), 0);
+
+        return {
+          processedInput: inputKg,
+          processedOutput: outputKg,
+          loss: inputKg - outputKg,
+          soldKg: sales.reduce((sum, sale) => sum + (Number(sale.qtyKg) || 0), 0),
+          soldValue: sales.reduce((sum, sale) => sum + (Number(sale.totalAmount ?? sale.amount) || 0), 0)
+        };
+      }
+
+      function renderDashboard() {
+        const totalKg = getTotalStock();
+        const totalKgNode = byId("total-kg");
+        const totalBagsNode = byId("total-bags");
+        const sellableNode = byId("sellable-kg");
+        const breakdownNode = byId("type-breakdown");
+        const todayProcessedNode = byId("today-processed");
+        const todayLossNode = byId("today-loss");
+        const todaySoldNode = byId("today-sold");
+        const todaySalesValueNode = byId("today-sales-value");
+        if (!totalKgNode || !totalBagsNode || !sellableNode || !breakdownNode || !todayProcessedNode || !todayLossNode || !todaySoldNode || !todaySalesValueNode) return;
+
+        totalKgNode.textContent = `${fmtNum(totalKg)} kg`;
+        totalBagsNode.textContent = `≈ ${fmtNum(totalKg / BAG_WEIGHT_KG, 2)} bags`;
+
+        const sellable = getSellableStock();
+        sellableNode.textContent = `${fmtNum(sellable)} kg`;
+
+        const types = getStockByType();
+        let html = "";
+        for (const [typeKey, kg] of Object.entries(types)) {
+          if (kg > 0) {
+            const label = typeKey
+              .split("_")
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(" ");
+            html += `<div class="card glass" style="padding:12px;"><div class="text-sm muted">${label}</div><div class="text-xl font-semibold">${fmtNum(kg)} kg</div></div>`;
+          }
+        }
+        breakdownNode.innerHTML = html || '<div class="muted" style="text-align:center; grid-column:1/-1; padding:12px;">No stock recorded yet</div>';
+
+        const today = getRecentActivity(1);
+        todayProcessedNode.textContent = `Input: ${fmtNum(today.processedInput)} kg → Output: ${fmtNum(today.processedOutput)} kg`;
+        todayLossNode.textContent = `Loss: ${fmtNum(today.loss)} kg ${today.loss > 0 ? "(normal 2-5%)" : ""}`;
+        todaySoldNode.textContent = `${fmtNum(today.soldKg)} kg`;
+        todaySalesValueNode.textContent = `Value: ${fmtNum(today.soldValue)} Rs`;
+      }
+
+      function renderStats() {
+        renderDashboard();
+      }
+
+      function renderInventoryTable() {
+        const query = normalizeText(state.filters.inventory);
+        const rows = state.db.inventory.filter((row) => {
+          if (!query) return true;
+          const hay = toSearchText([row.itemName, row.city, row.quantityKg, row.quantityBags]);
+          return hay.includes(query);
+        });
+
+        byId("inventory-table").innerHTML = rows
+          .map((row) => {
+            const bags = Number(row.quantityBags || 0);
+            const kg = Number(row.quantityKg || 0);
+            const typeValue = normalizeInventoryType(row.type || inferInventoryTypeFromName(row.itemName || "", "raw"));
+            const avgKgPerBag = bags > 0 ? kg / bags : 0;
+            const warn = bags > 0 && Math.abs(avgKgPerBag - BAG_WEIGHT_KG) / BAG_WEIGHT_KG > BAG_AVG_WARN_RATIO;
+            const statusText = bags <= 0 ? "N/A" : warn ? "Check" : "OK";
+            const rowClass = state.lastEdited.table === "inventory" && state.lastEdited.id === row.id ? " class=\"row-edited\"" : "";
+            return `<tr${rowClass}><td>${row.itemName}</td><td>${row.city}</td><td><span class="${getInventoryTypeClass(typeValue)}">${getInventoryTypeLabel(typeValue)}</span></td><td>${fmtNum(kg)}</td><td>${fmtNum(bags)}</td><td>${bags > 0 ? fmtNum(avgKgPerBag) : "-"}</td><td>${statusText}</td><td>${fmtDate(row.updatedAt)}</td><td><div class="actions"><button class="btn small edit-item-btn" data-item-id="${row.id}" type="button">Edit</button><button class="btn small danger del-item-btn" data-item-id="${row.id}" type="button">Remove</button></div></td></tr>`;
+          })
+          .join("");
+
+        document.querySelectorAll(".edit-item-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            const rowId = button.getAttribute("data-item-id");
+            const row = state.db.inventory.find((item) => item.id === rowId);
+            setInventoryEditMode(row);
+            setSection("inventory");
+          });
+        });
+
+        document.querySelectorAll(".del-item-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            const rowId = button.getAttribute("data-item-id");
+            const row = state.db.inventory.find((item) => item.id === rowId);
+            if (!row) return;
+            const ok = confirm(`Remove inventory item "${row.itemName}" at "${row.city}"?`);
+            if (!ok) return;
+            state.db.inventory = state.db.inventory.filter((item) => item.id !== rowId);
+            saveDb();
+            renderAll();
+            if (state.editingInventoryId === rowId) clearInventoryEditMode();
+            showSavedFeedback(byId("save-item-btn"), "Inventory removed");
+          });
+        });
+      }
+
+      function renderProcessTable() {
+        const query = normalizeText(state.filters.process);
+        const rows = state.db.processEntries.filter((row) => {
+          if (!query) return true;
+          const hay = toSearchText([row.processType, row.processItem, row.outputItem, row.city, row.vendorName]);
+          return hay.includes(query);
+        });
+
+        byId("process-table").innerHTML = rows
+          .slice(0, 25)
+          .map((row) => {
+            const rowClass = state.lastEdited.table === "process" && state.lastEdited.id === row.id ? " class=\"row-edited\"" : "";
+            const lossKg = Math.max(0, Number(row.qtyInKg || 0) - Number(row.qtyOutKg || 0));
+            return `<tr${rowClass}><td>${fmtDate(row.createdAt)}</td><td>${row.processType}</td><td>${row.processItem || row.itemName || ""}</td><td>${row.outputItem || row.processItem || row.itemName || ""}</td><td>${row.city}</td><td>${row.vendorName || ""}</td><td>${fmtNum(row.qtyInKg)}</td><td>${fmtNum(row.qtyOutKg)}</td><td>${fmtNum(lossKg)}</td><td>${fmtNum(row.qtyInBags)}</td><td>${fmtNum(row.conesProduced || 0)}</td><td><div class="actions"><button class="btn small edit-process-btn" data-process-id="${row.id}" type="button">Edit</button><button class="btn small danger del-process-btn" data-process-id="${row.id}" type="button">Remove</button></div></td></tr>`;
+          })
+          .join("");
+
+        document.querySelectorAll(".edit-process-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            const rowId = button.getAttribute("data-process-id");
+            const row = state.db.processEntries.find((entry) => entry.id === rowId);
+            setProcessEditMode(row);
+            setSection("process");
+          });
+        });
+
+        document.querySelectorAll(".del-process-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            const rowId = button.getAttribute("data-process-id");
+            const row = state.db.processEntries.find((entry) => entry.id === rowId);
+            if (!row) return;
+
+            if (!canApplyProcessImpact(row, -1)) {
+              alert("Cannot remove: stock has changed and rollback would make negative inventory.");
+              return;
+            }
+
+            const ok = confirm(`Remove process entry \"${row.processType}\" for \"${row.processItem || row.itemName || "item"}\"?`);
+            if (!ok) return;
+
+            applyProcessImpact(row, -1, state.user?.id || "system");
+            state.db.processEntries = state.db.processEntries.filter((entry) => entry.id !== rowId);
+            if (state.editingProcessId === rowId) clearProcessEditMode();
+            saveDb();
+            renderAll();
+            showSavedFeedback(byId("save-process-btn"), "Process removed");
+          });
+        });
+      }
+
+      function renderTransferTable() {
+        const query = normalizeText(state.filters.transfer);
+        const rows = state.db.transfers.filter((row) => {
+          if (!query) return true;
+          const hay = toSearchText([row.itemName, row.fromCity, row.toCity, row.note, row.status, row.statusNote]);
+          return hay.includes(query);
+        });
+
+        byId("transfer-table").innerHTML = rows
+          .slice(0, 25)
+          .map((row) => {
+            const rowClass = state.lastEdited.table === "transfer" && state.lastEdited.id === row.id ? " class=\"row-edited\"" : "";
+            return `<tr${rowClass}><td>${fmtDate(row.createdAt)}</td><td>${row.itemName}</td><td>${row.fromCity}</td><td>${row.toCity}</td><td>${fmtNum(row.qtyKg)}</td><td>${row.status || "Sent"}</td><td>${fmtNum(row.receivedKg || 0)}</td><td>${row.statusNote || row.note || ""}</td><td>${row.statusUpdatedBy || row.enteredBy || ""}</td><td><div class="actions"><button class="btn small edit-transfer-btn" data-transfer-id="${row.id}" type="button">Edit</button><button class="btn small danger del-transfer-btn" data-transfer-id="${row.id}" type="button">Remove</button></div></td></tr>`;
+          })
+          .join("");
+
+        document.querySelectorAll(".edit-transfer-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            const rowId = button.getAttribute("data-transfer-id");
+            const row = state.db.transfers.find((entry) => entry.id === rowId);
+            setTransferEditMode(row);
+            setSection("transfer");
+          });
+        });
+
+        document.querySelectorAll(".del-transfer-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            const rowId = button.getAttribute("data-transfer-id");
+            const row = state.db.transfers.find((entry) => entry.id === rowId);
+            if (!row) return;
+
+            if (!canApplyTransferImpact(row, -1)) {
+              return alert("Cannot remove: stock has changed and rollback would make negative inventory.");
+            }
+
+            const ok = confirm(`Remove transfer of \"${row.itemName}\" from \"${row.fromCity}\" to \"${row.toCity}\"?`);
+            if (!ok) return;
+
+            applyTransferImpact(row, -1, state.user?.id || "system");
+            state.db.transfers = state.db.transfers.filter((entry) => entry.id !== rowId);
+            if (state.editingTransferId === rowId) clearTransferEditMode();
+            saveDb();
+            renderAll();
+            showSavedFeedback(byId("save-transfer-btn"), "Transfer removed");
+          });
+        });
+      }
+
+      function renderSalesTable() {
+        const query = normalizeText(state.filters.sales);
+        const rows = state.db.salesEntries.filter((row) => {
+          if (!query) return true;
+          const hay = toSearchText([row.itemName, row.city, row.customer, row.invoice, row.packing, row.note, row.qtyKg, row.amount]);
+          return hay.includes(query);
+        });
+
+        byId("sales-table").innerHTML = rows
+          .slice(0, 25)
+          .map((row) => {
+            const rowClass = state.lastEdited.table === "sales" && state.lastEdited.id === row.id ? " class=\"row-edited\"" : "";
+            return `<tr${rowClass}><td>${fmtDate(row.createdAt)}</td><td>${row.itemName}</td><td>${row.city}</td><td>${fmtNum(row.qtyKg)}</td><td>${row.packing || "Cone"}</td><td>${fmtNum(row.ratePerKg)}</td><td>${fmtNum(row.amount)}</td><td>${row.customer || ""}</td><td>${row.invoice || ""}</td><td>${row.note || ""}</td><td><div class="actions"><button class="btn small edit-sale-btn" data-sale-id="${row.id}" type="button">Edit</button><button class="btn small danger del-sale-btn" data-sale-id="${row.id}" type="button">Remove</button></div></td></tr>`;
+          })
+          .join("");
+
+        document.querySelectorAll(".edit-sale-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            const rowId = button.getAttribute("data-sale-id");
+            const row = state.db.salesEntries.find((entry) => entry.id === rowId);
+            setSaleEditMode(row);
+            setSection("sales");
+          });
+        });
+
+        document.querySelectorAll(".del-sale-btn").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const rowId = button.getAttribute("data-sale-id");
+            const row = state.db.salesEntries.find((entry) => entry.id === rowId);
+            if (!row) return;
+            const ok = confirm(`Remove sale of "${row.itemName}" from "${row.city}"?`);
+            if (!ok) return;
+
+            applySaleImpact(row, -1, state.user?.id || "system");
+            removeLinkedSaleFinanceEntry(row);
+            state.db.salesEntries = state.db.salesEntries.filter((entry) => entry.id !== rowId);
+            if (state.editingSaleId === rowId) clearSaleEditMode();
+            await persistAppState();
+            renderAll();
+            showSavedFeedback(byId("save-sale-btn"), "Sale removed");
+          });
+        });
+      }
+
+      function renderFinanceTable() {
+        const query = normalizeText(state.filters.finance);
+        const rows = state.db.financeEntries.filter((row) => {
+          if (!query) return true;
+          const hay = toSearchText([row.entryType, row.category, row.reference, row.amount]);
+          return hay.includes(query);
+        });
+
+        byId("finance-table").innerHTML = rows
+          .slice(0, 25)
+          .map((row) => {
+            const rowClass = state.lastEdited.table === "finance" && state.lastEdited.id === row.id ? " class=\"row-edited\"" : "";
+            return `<tr${rowClass}><td>${fmtDate(row.createdAt)}</td><td>${row.entryType}</td><td>${row.category || ""}</td><td>${fmtNum(row.amount)}</td><td>${row.reference || ""}</td><td><div class="actions"><button class="btn small edit-finance-btn" data-fin-id="${row.id}" type="button">Edit</button><button class="btn small danger del-finance-btn" data-fin-id="${row.id}" type="button">Remove</button></div></td></tr>`;
+          })
+          .join("");
+
+        document.querySelectorAll(".edit-finance-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            const rowId = button.getAttribute("data-fin-id");
+            const row = state.db.financeEntries.find((entry) => entry.id === rowId);
+            if (row && row.entryType === "Sale" && row.saleEntryId) {
+              const linkedSale = state.db.salesEntries.find((entry) => entry.id === row.saleEntryId);
+              if (linkedSale) {
+                setSaleEditMode(linkedSale);
+                setSection("sales");
+                alert("Edit this from Sales / Dispatch module.");
+                return;
+              }
+            }
+            setFinanceEditMode(row);
+            setSection("finance");
+          });
+        });
+
+        document.querySelectorAll(".del-finance-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            const rowId = button.getAttribute("data-fin-id");
+            const row = state.db.financeEntries.find((entry) => entry.id === rowId);
+            if (!row) return;
+            if (row.entryType === "Sale" && row.saleEntryId && state.db.salesEntries.some((entry) => entry.id === row.saleEntryId)) {
+              alert("Remove this from Sales / Dispatch module.");
+              return;
+            }
+            const ok = confirm(`Remove finance entry \"${row.entryType}\" amount ${fmtNum(row.amount)}?`);
+            if (!ok) return;
+            state.db.financeEntries = state.db.financeEntries.filter((entry) => entry.id !== rowId);
+            if (state.editingFinanceId === rowId) clearFinanceEditMode();
+            saveDb();
+            renderAll();
+            showSavedFeedback(byId("save-txn-btn"), "Finance removed");
+          });
+        });
+      }
+
+      function renderReport() {
+        if (!canAccess("reports")) return;
+        const city = normalizeText(byId("report-location").value);
+        const process = byId("report-process").value;
+        const fromDate = byId("report-from-date").value;
+        const toDate = byId("report-to-date").value;
+        const rows = state.db.processEntries.filter((r) => {
+          return (!city || normalizeText(r.city) === city)
+            && (process === "All" || r.processType === process)
+            && isDateInRange(r.createdAt, fromDate, toDate);
+        });
+
+        const financeRows = state.db.financeEntries.filter((row) => isDateInRange(row.createdAt, fromDate, toDate));
+        const salesRows = state.db.salesEntries.filter((row) => {
+          return (!city || normalizeText(row.city) === city) && isDateInRange(row.createdAt, fromDate, toDate);
+        });
+        const monthKey = new Date().toISOString().slice(0, 7);
+        const thisMonthSalesRows = state.db.salesEntries.filter((row) => String(row.createdAt || "").slice(0, 7) === monthKey);
+
+        const totalIn = rows.reduce((s, r) => s + Number(r.qtyInKg || 0), 0);
+        const totalInBags = rows.reduce((s, r) => s + Number(r.qtyInBags || 0), 0);
+        const totalOut = rows.reduce((s, r) => s + Number(r.qtyOutKg || 0), 0);
+        const totalOutBags = rows.reduce((s, r) => s + Number(r.qtyOutBags || 0), 0);
+        const totalBags = rows.reduce((s, r) => s + Number(r.bagsUsed || 0), 0);
+        const totalIncome = financeRows.filter((r) => r.entryType === "Sale").reduce((s, r) => s + Number(r.amount || 0), 0);
+        const totalSalesKg = salesRows.reduce((s, r) => s + Number(r.qtyKg || 0), 0);
+        const totalSalesValue = salesRows.reduce((s, r) => s + Number(r.amount || 0), 0);
+        const thisMonthSalesKg = thisMonthSalesRows.reduce((s, r) => s + Number(r.qtyKg || 0), 0);
+        const thisMonthSalesValue = thisMonthSalesRows.reduce((s, r) => s + Number(r.amount || 0), 0);
+        const monthlySalesMap = salesRows.reduce((acc, row) => {
+          const month = String(row.createdAt || "").slice(0, 7) || "Unknown";
+          if (!acc[month]) acc[month] = { kg: 0, value: 0 };
+          acc[month].kg += Number(row.qtyKg || 0);
+          acc[month].value += Number(row.amount || 0);
+          return acc;
+        }, {});
+        const monthlySalesRows = Object.entries(monthlySalesMap)
+          .sort((a, b) => String(b[0]).localeCompare(String(a[0])))
+          .map(([month, value]) => `<tr><td>${month}</td><td>${fmtNum(value.kg)}</td><td>${fmtNum(value.value)}</td></tr>`)
+          .join("");
+        const topCustomersMap = salesRows.reduce((acc, row) => {
+          const customer = cleanText(row.customer || "Walk-in");
+          if (!acc[customer]) acc[customer] = { kg: 0, value: 0 };
+          acc[customer].kg += Number(row.qtyKg || 0);
+          acc[customer].value += Number(row.amount || 0);
+          return acc;
+        }, {});
+        const topCustomerRows = Object.entries(topCustomersMap)
+          .sort((a, b) => Number(b[1].value) - Number(a[1].value))
+          .slice(0, 5)
+          .map(([name, value]) => `<tr><td>${name}</td><td>${fmtNum(value.kg)}</td><td>${fmtNum(value.value)}</td></tr>`)
+          .join("");
+        const totalExpense = financeRows.filter((r) => ["Purchase", "Expense", "Salary"].includes(r.entryType)).reduce((s, r) => s + Number(r.amount || 0), 0);
+        const stockValueEstimate = state.db.inventory.reduce((s, r) => s + (Number(r.quantityKg || 0) * 1), 0);
+        const typeBreakdown = state.db.inventory.reduce((acc, row) => {
+          if (city && normalizeText(row.city) !== city) return acc;
+          const key = normalizeInventoryType(row.type || inferInventoryTypeFromName(row.itemName || "", "raw"));
+          acc[key] = (acc[key] || 0) + Number(row.quantityKg || 0);
+          return acc;
+        }, { raw: 0, grey_cone: 0, dyed_cone: 0, other_processed: 0 });
+
+        const byProcess = rows.reduce((acc, row) => {
+          if (!acc[row.processType]) acc[row.processType] = { count: 0, qtyIn: 0, qtyInBags: 0, qtyOut: 0, qtyOutBags: 0, bags: 0 };
+          acc[row.processType].count += 1;
+          acc[row.processType].qtyIn += Number(row.qtyInKg || 0);
+          acc[row.processType].qtyInBags += Number(row.qtyInBags || 0);
+          acc[row.processType].qtyOut += Number(row.qtyOutKg || 0);
+          acc[row.processType].qtyOutBags += Number(row.qtyOutBags || 0);
+          acc[row.processType].bags += Number(row.bagsUsed || 0);
+          return acc;
+        }, {});
+
+        const processRows = Object.entries(byProcess)
+          .map(([name, value]) => `<tr><td>${name}</td><td>${value.count}</td><td>${fmtNum(value.qtyIn)}</td><td>${fmtNum(value.qtyInBags)}</td><td>${fmtNum(value.qtyOut)}</td><td>${fmtNum(value.qtyOutBags)}</td><td>${fmtNum(value.bags)}</td></tr>`)
+          .join("");
+
+        byId("report-output").innerHTML = `
+          <h3>Operational Summary</h3>
+          <div class="chips-row">
+            <span class="chip">Input: ${fmtNum(totalIn)} kg</span>
+            <span class="chip">Input: ${fmtNum(totalInBags)} bags</span>
+            <span class="chip">Output: ${fmtNum(totalOut)} kg</span>
+            <span class="chip">Output: ${fmtNum(totalOutBags)} bags</span>
+            <span class="chip">Bags Used: ${totalBags}</span>
+            <span class="chip">Income: ${fmtNum(totalIncome)}</span>
+            <span class="chip">Sales Qty: ${fmtNum(totalSalesKg)} kg</span>
+            <span class="chip">Sales Value: ${fmtNum(totalSalesValue)}</span>
+            <span class="chip">This Month Sales: ${fmtNum(thisMonthSalesKg)} kg</span>
+            <span class="chip">This Month Value: ${fmtNum(thisMonthSalesValue)}</span>
+            <span class="chip">Raw Stock: ${fmtNum(typeBreakdown.raw)} kg</span>
+            <span class="chip">Grey Cone Stock: ${fmtNum(typeBreakdown.grey_cone)} kg</span>
+            <span class="chip">Dyed Cone Stock: ${fmtNum(typeBreakdown.dyed_cone)} kg</span>
+            <span class="chip">Expense: ${fmtNum(totalExpense)}</span>
+            <span class="chip">Net: ${fmtNum(totalIncome - totalExpense)}</span>
+            <span class="chip">Stock Value (est): ${fmtNum(stockValueEstimate)}</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Process</th><th>Entries</th><th>Input (kg)</th><th>Input (bags)</th><th>Output (kg)</th><th>Output (bags)</th><th>Bags Used</th></tr></thead>
+              <tbody>${processRows || "<tr><td colspan='7'>No data</td></tr>"}</tbody>
+            </table>
+          </div>
+          <h3 style="margin-top:16px;">Monthly Sales Summary</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Month</th><th>Sales (kg)</th><th>Sales Value</th></tr></thead>
+              <tbody>${monthlySalesRows || "<tr><td colspan='3'>No sales data</td></tr>"}</tbody>
+            </table>
+          </div>
+          <h3 style="margin-top:16px;">Top Customers</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Customer</th><th>Sales (kg)</th><th>Sales Value</th></tr></thead>
+              <tbody>${topCustomerRows || "<tr><td colspan='3'>No customer sales data</td></tr>"}</tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      function renderNewUserPermissions(defaultType) {
+        const defaults = defaultType === "full" ? defaultPermissions("admin") : defaultPermissions("operator");
+        byId("new-user-perms").innerHTML = MODULES.map((module) => `
+          <label class="check-pill">
+            <input type="checkbox" data-module="${module}" ${defaults[module] ? "checked" : ""} />
+            <span>${module}</span>
+          </label>
+        `).join("");
+      }
+
+      function renderUsersTable() {
+        const rows = state.users.map((user) => {
+          const permCheckboxes = MODULES.map((module) => `
+            <label class="check-pill compact">
+              <input type="checkbox" data-perm-user="${user.id}" data-module="${module}" ${user.permissions[module] ? "checked" : ""} ${user.role === "admin" ? "disabled" : ""} />
+              <span>${module}</span>
+            </label>
+          `).join("");
+
+          const adminCount = state.users.filter((u) => String(u.role || "").toLowerCase() === "admin").length;
+          const isLastAdmin = String(user.role || "").toLowerCase() === "admin" && adminCount <= 1;
+          const canDelete = state.user && user.id !== state.user.id && !isLastAdmin;
+          return `
+            <tr>
+              <td>${user.username}</td>
+              <td>${user.role}</td>
+              <td><div class="perm-grid">${permCheckboxes}</div></td>
+              <td>
+                <div class="actions">
+                  <button class="btn small save-user" data-user-id="${user.id}">Save</button>
+                  ${canDelete ? `<button class="btn small danger del-user" data-user-id="${user.id}">Delete</button>` : ""}
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join("");
+
+        byId("users-table").innerHTML = rows;
+
+        document.querySelectorAll(".save-user").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const userId = btn.getAttribute("data-user-id");
+            const user = state.users.find((u) => u.id === userId);
+            if (!user) return;
+            if (user.role === "admin") return alert("Admin always has full permissions.");
+
+            MODULES.forEach((module) => {
+              const input = document.querySelector(`input[data-perm-user='${userId}'][data-module='${module}']`);
+              user.permissions[module] = Boolean(input && input.checked);
+            });
+
+            user.permissions.dashboard = true;
+            saveUsers();
+            if (state.user && state.user.id === user.id) {
+              state.user = normalizeUser(user);
+              applyNavigationPermissions();
+            }
+            alert("Permissions saved.");
+          });
+        });
+
+        document.querySelectorAll(".del-user").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const userId = btn.getAttribute("data-user-id");
+            const target = state.users.find((user) => user.id === userId);
+            if (!target) return;
+            const adminCount = state.users.filter((u) => String(u.role || "").toLowerCase() === "admin").length;
+            if (String(target.role || "").toLowerCase() === "admin" && adminCount <= 1) {
+              alert("Cannot delete the last admin account.");
+              return;
+            }
+            state.users = state.users.filter((u) => u.id !== userId);
+            saveUsers();
+            renderUsersTable();
+          });
+        });
+      }
+
+      function renderAll() {
+        ensureAdminAccountExists();
+        enforceCurrentAdminAccess();
+        refreshLocationSuggestions();
+        refreshProcessLocationOptions();
+        refreshProcessItemOptions();
+        refreshTransferLocationOptions();
+        refreshTransferItemOptions();
+        refreshSaleItemOptions();
+        refreshSaleLocationOptions();
+        refreshItemSuggestions();
+        updateProcessTypeFields();
+        renderDashboard();
+        renderInventoryTable();
+        renderProcessTable();
+        renderTransferTable();
+        renderSalesTable();
+        renderFinanceTable();
+        recalculateProcessOutputFromLoss();
+        updateProcessStockHint();
+        updateTransferStockHint();
+        updateSaleStockHint();
+        if (canAccess("reports")) renderReport();
+        if (canAccess("admin")) renderUsersTable();
+      }
+
+      function bindForms() {
+        bindEnterFlow(["item-name", "item-location", "item-type", "item-qty"], "save-item-btn");
+        bindEnterFlow(["process-item", "process-output-item", "process-type", "process-location", "process-vendor", "process-sent-kg", "process-received-kg", "process-cones"], "save-process-btn");
+        bindEnterFlow(["transfer-item", "transfer-from-location", "transfer-to-location", "transfer-qty", "transfer-note"], "save-transfer-btn");
+        bindEnterFlow(["sale-item", "sale-location", "sale-qty", "sale-packing", "sale-rate", "sale-customer", "sale-invoice", "sale-note"], "save-sale-btn");
+        bindEnterFlow(["txn-type", "txn-category", "txn-amount", "txn-ref"], "save-txn-btn");
+
+        byId("inventory-search")?.addEventListener("input", (event) => {
+          state.filters.inventory = event.target.value || "";
+          renderInventoryTable();
+        });
+
+        byId("process-search")?.addEventListener("input", (event) => {
+          state.filters.process = event.target.value || "";
+          renderProcessTable();
+        });
+
+        byId("transfer-search")?.addEventListener("input", (event) => {
+          state.filters.transfer = event.target.value || "";
+          renderTransferTable();
+        });
+
+        byId("sales-search")?.addEventListener("input", (event) => {
+          state.filters.sales = event.target.value || "";
+          renderSalesTable();
+        });
+
+        byId("finance-search")?.addEventListener("input", (event) => {
+          state.filters.finance = event.target.value || "";
+          renderFinanceTable();
+        });
+
+        byId("cancel-item-edit-btn").addEventListener("click", () => {
+          clearInventoryEditMode();
+        });
+
+        byId("cancel-process-edit-btn").addEventListener("click", () => {
+          clearProcessEditMode();
+        });
+
+        byId("cancel-transfer-edit-btn").addEventListener("click", () => {
+          clearTransferEditMode();
+          refreshTransferItemOptions();
+          updateTransferStockHint();
+        });
+
+        byId("cancel-sale-edit-btn").addEventListener("click", () => {
+          clearSaleEditMode();
+        });
+
+        ["transfer-item", "transfer-from-location", "transfer-to-location", "transfer-qty"].forEach((id) => {
+          const element = byId(id);
+          if (element) element.addEventListener("input", updateTransferStockHint);
+          if (element) element.addEventListener("change", updateTransferStockHint);
+        });
+
+        byId("transfer-from-location").addEventListener("change", () => {
+          refreshTransferItemOptions();
+          updateTransferStockHint();
+        });
+
+        byId("process-location").addEventListener("change", () => {
+          refreshProcessItemOptions();
+          updateProcessStockHint();
+        });
+
+        byId("process-item").addEventListener("change", () => {
+          updateProcessStockHint();
+        });
+
+        byId("process-type").addEventListener("change", () => {
+          updateProcessTypeFields();
+        });
+
+        byId("process-sent-kg").addEventListener("input", () => {
+          state.processReceivedManual = false;
+          recalculateProcessOutputFromLoss();
+          updateProcessStockHint();
+        });
+
+        byId("process-received-kg").addEventListener("input", () => {
+          state.processReceivedManual = true;
+          recalculateProcessOutputFromLoss();
+        });
+
+        applyKgInputBehavior("item-qty");
+        applyKgInputBehavior("process-sent-kg", () => {
+          const itemName = cleanText(byId("process-item")?.value);
+          const city = cleanText(byId("process-location")?.value);
+          const row = itemName && city ? findInventoryRow(itemName, city) : null;
+          return row ? Number(row.quantityKg || 0) : 0;
+        }, () => {
+          recalculateProcessOutputFromLoss();
+          updateProcessStockHint();
+        });
+        applyKgInputBehavior("process-received-kg");
+        applyKgInputBehavior("transfer-qty", () => {
+          const itemName = cleanText(byId("transfer-item")?.value);
+          const fromCity = cleanText(byId("transfer-from-location")?.value);
+          const row = itemName && fromCity ? findInventoryRow(itemName, fromCity) : null;
+          return row ? Number(row.quantityKg || 0) : 0;
+        }, () => {
+          updateTransferStockHint();
+        });
+        applyKgInputBehavior("sale-qty", () => {
+          const itemName = cleanText(byId("sale-item")?.value);
+          const city = cleanText(byId("sale-location")?.value);
+          const row = itemName && city ? findInventoryRow(itemName, city) : null;
+          return row ? Number(row.quantityKg || 0) : 0;
+        }, () => {
+          updateSaleStockHint();
+          updateSaleComputedValues();
+        });
+
+        ["sale-item", "sale-location", "sale-qty", "sale-rate"].forEach((id) => {
+          const element = byId(id);
+          if (element) element.addEventListener("input", () => {
+            updateSaleStockHint();
+            updateSaleComputedValues();
+          });
+          if (element) element.addEventListener("change", () => {
+            updateSaleStockHint();
+            updateSaleComputedValues();
+          });
+        });
+
+        byId("sale-item")?.addEventListener("change", () => {
+          refreshSaleLocationOptions();
+          updateSaleStockHint();
+          updateSaleComputedValues();
+        });
+
+        byId("cancel-finance-edit-btn").addEventListener("click", () => {
+          clearFinanceEditMode();
+        });
+
+        byId("remove-item-btn").addEventListener("click", async () => {
+          if (!state.editingInventoryId) return;
+          const row = state.db.inventory.find((item) => item.id === state.editingInventoryId);
+          if (!row) return;
+          const ok = confirm(`Remove inventory item "${row.itemName}" at "${row.city}"?`);
+          if (!ok) return;
+          state.db.inventory = state.db.inventory.filter((item) => item.id !== state.editingInventoryId);
+          await persistAppState();
+          renderAll();
+          clearInventoryEditMode();
+          showSavedFeedback(byId("save-item-btn"), "Inventory removed");
+        });
+
+        byId("save-item-btn").addEventListener("click", async () => {
+          if (!requireAuth()) return;
+          if (!canAccess("inventory")) return alert("No permission.");
+          const itemName = cleanText(byId("item-name").value);
+          const city = cleanText(byId("item-location").value);
+          const type = normalizeInventoryType(byId("item-type").value || inferInventoryTypeFromName(itemName, "raw"));
+          const quantityKg = Number(byId("item-qty").value || 0);
+          const quantityBags = quantityKg / BAG_WEIGHT_KG;
+          if (!itemName) return alert("Item name is required.");
+          if (!city) return alert("Location is required.");
+          if (quantityKg <= 0) return alert("Quantity must be greater than 0.");
+
+          const editingRow = state.editingInventoryId
+            ? state.db.inventory.find((item) => item.id === state.editingInventoryId)
+            : null;
+
+          if (editingRow) {
+            editingRow.itemName = itemName;
+            editingRow.city = city;
+            editingRow.type = type;
+            editingRow.quantityKg = quantityKg;
+            editingRow.quantityBags = quantityBags;
+            editingRow.updatedAt = now();
+            editingRow.updatedBy = state.user.id;
+            markLastEdited("inventory", editingRow.id);
+          } else {
+            const existing = state.db.inventory.find((item) => normalizeText(item.itemName) === normalizeText(itemName) && normalizeText(item.city) === normalizeText(city));
+            if (existing) {
+              existing.type = type;
+              existing.quantityKg = quantityKg;
+              existing.quantityBags = quantityBags;
+              existing.updatedAt = now();
+              existing.updatedBy = state.user.id;
+              markLastEdited("inventory", existing.id);
+            } else {
+              const newId = uid();
+              state.db.inventory.push({ id: newId, itemName, city, type, quantityKg, quantityBags, updatedAt: now(), updatedBy: state.user.id });
+              markLastEdited("inventory", newId);
+            }
+          }
+
+          await persistAppState();
+          renderAll();
+          const wasEditing = Boolean(state.editingInventoryId);
+          clearInventoryEditMode();
+          showSavedFeedback(byId("save-item-btn"), wasEditing ? "Inventory updated" : "Inventory saved");
+        });
+
+        byId("save-process-btn").addEventListener("click", async () => {
+          if (!requireAuth()) return;
+          if (!canAccess("process")) return alert("No permission.");
+          const processItem = cleanText(byId("process-item").value);
+          const outputItemRaw = cleanText(byId("process-output-item").value);
+          const location = cleanText(byId("process-location").value);
+          const qtyInKg = Number(byId("process-sent-kg").value || 0);
+          const qtyOutKg = Number(byId("process-received-kg").value || 0);
+          const qtyInBags = qtyInKg / BAG_WEIGHT_KG;
+          const qtyOutBags = qtyOutKg / BAG_WEIGHT_KG;
+          const bagsUsedAuto = qtyInBags;
+          const lossKg = Math.max(0, qtyInKg - qtyOutKg);
+          const lossPct = qtyInKg > 0 ? (lossKg / qtyInKg) * 100 : 0;
+          const processType = byId("process-type").value;
+          const processMeta = getProcessTypeMeta(processType);
+          const conesProduced = processMeta.isCone ? Number(byId("process-cones").value || 0) : 0;
+          const autoAddCones = processMeta.isCone && Boolean(byId("process-auto-add-cones").checked) && conesProduced > 0;
+          if (!location) return alert("Location is required.");
+          if (!processItem) return alert("Input item is required.");
+          if (!hasInventoryLocation(location)) return alert("Process location must be selected from inventory locations.");
+          const validInputAtLocation = getInventoryItems(location).some((name) => normalizeText(name) === normalizeText(processItem));
+          if (!validInputAtLocation) return alert("Input item must be selected from inventory for this location.");
+          if (qtyInKg <= 0 || qtyOutKg < 0) return alert("Sent kg must be greater than 0 and received kg must be non-negative.");
+          const sourceRowForProcess = findInventoryRow(processItem, location);
+          if (!sourceRowForProcess || Number(sourceRowForProcess.quantityKg || 0) < qtyInKg) {
+            return alert(`Not enough stock. Available: ${fmtNum(sourceRowForProcess?.quantityKg || 0)} kg`);
+          }
+          const outputItem = outputItemRaw || processItem;
+          const outputType = inferOutputTypeByProcess(processType, outputItem);
+
+          const newEntry = {
+            id: state.editingProcessId || uid(),
+            processType,
+            processItem,
+            outputItem,
+            outputType,
+            city: location,
+            vendorName: byId("process-vendor").value.trim(),
+            qtyInKg,
+            qtyInBags,
+            qtyOutKg,
+            qtyOutBags,
+            lossPct,
+            bagsUsed: bagsUsedAuto,
+            conesProduced,
+            autoAddCones,
+            createdAt: now(),
+            enteredBy: state.user.id
+          };
+
+          const editingEntry = state.editingProcessId
+            ? state.db.processEntries.find((entry) => entry.id === state.editingProcessId)
+            : null;
+
+          if (editingEntry) {
+            if (!canApplyProcessImpact(editingEntry, -1)) {
+              return alert("Cannot update this entry right now because rollback would make inventory negative.");
+            }
+
+            applyProcessImpact(editingEntry, -1, state.user.id);
+
+            if (!canApplyProcessImpact(newEntry, 1)) {
+              applyProcessImpact(editingEntry, 1, state.user.id);
+              return alert("Not enough stock in main inventory for updated process values.");
+            }
+
+            applyProcessImpact(newEntry, 1, state.user.id);
+            Object.assign(editingEntry, newEntry);
+            markLastEdited("process", editingEntry.id);
+          } else {
+            if (!canApplyProcessImpact(newEntry, 1)) {
+              return alert("Not enough stock in main inventory for this process entry.");
+            }
+            applyProcessImpact(newEntry, 1, state.user.id);
+            state.db.processEntries.unshift(newEntry);
+            markLastEdited("process", newEntry.id);
+          }
+
+          await persistAppState();
+          renderAll();
+          const wasEditingProcess = Boolean(state.editingProcessId);
+          clearProcessEditMode();
+          showSavedFeedback(byId("save-process-btn"), wasEditingProcess ? "Work entry updated" : "Work entry saved");
+        });
+
+        byId("remove-process-btn").addEventListener("click", async () => {
+          if (!state.editingProcessId) return;
+          const entry = state.db.processEntries.find((row) => row.id === state.editingProcessId);
+          if (!entry) return;
+
+          if (!canApplyProcessImpact(entry, -1)) {
+            return alert("Cannot remove: stock has changed and rollback would make negative inventory.");
+          }
+
+          const ok = confirm(`Remove process entry \"${entry.processType}\" for \"${entry.processItem || entry.itemName || "item"}\"?`);
+          if (!ok) return;
+
+          applyProcessImpact(entry, -1, state.user.id);
+          state.db.processEntries = state.db.processEntries.filter((row) => row.id !== state.editingProcessId);
+          await persistAppState();
+          renderAll();
+          clearProcessEditMode();
+          showSavedFeedback(byId("save-process-btn"), "Process removed");
+        });
+
+        byId("remove-transfer-btn").addEventListener("click", async () => {
+          if (!state.editingTransferId) return;
+          const entry = state.db.transfers.find((row) => row.id === state.editingTransferId);
+          if (!entry) return;
+
+          if (!canApplyTransferImpact(entry, -1)) {
+            return alert("Cannot remove: stock has changed and rollback would make negative inventory.");
+          }
+
+          const ok = confirm(`Remove transfer of \"${entry.itemName}\" from \"${entry.fromCity}\" to \"${entry.toCity}\"?`);
+          if (!ok) return;
+
+          applyTransferImpact(entry, -1, state.user.id);
+          state.db.transfers = state.db.transfers.filter((row) => row.id !== state.editingTransferId);
+          await persistAppState();
+          renderAll();
+          clearTransferEditMode();
+          showSavedFeedback(byId("save-transfer-btn"), "Transfer removed");
+        });
+
+        byId("remove-finance-btn").addEventListener("click", async () => {
+          if (!state.editingFinanceId) return;
+          const entry = state.db.financeEntries.find((row) => row.id === state.editingFinanceId);
+          if (!entry) return;
+          if (entry.entryType === "Sale" && entry.saleEntryId && state.db.salesEntries.some((row) => row.id === entry.saleEntryId)) {
+            alert("Remove this from Sales / Dispatch module.");
+            return;
+          }
+          const ok = confirm(`Remove finance entry \"${entry.entryType}\" amount ${fmtNum(entry.amount)}?`);
+          if (!ok) return;
+          state.db.financeEntries = state.db.financeEntries.filter((row) => row.id !== state.editingFinanceId);
+          await persistAppState();
+          renderAll();
+          clearFinanceEditMode();
+          showSavedFeedback(byId("save-txn-btn"), "Finance removed");
+        });
+
+        byId("save-transfer-btn").addEventListener("click", async () => {
+          if (!requireAuth()) return;
+          if (!canAccess("transfer")) return alert("No permission.");
+
+          const itemName = cleanText(byId("transfer-item").value);
+          const fromCity = cleanText(byId("transfer-from-location").value);
+          const toCity = getTransferToCityValue();
+          const qtyKg = Number(byId("transfer-qty").value || 0);
+          const qtyBags = qtyKg / BAG_WEIGHT_KG;
+          const note = byId("transfer-note").value.trim();
+          if (!itemName) return alert("Item is required.");
+          if (!fromCity || !toCity) return alert("Both locations are required.");
+          if (!hasInventoryLocation(fromCity)) return alert("From location must be selected from inventory locations.");
+          if (normalizeText(fromCity) === normalizeText(toCity)) return alert("From and To locations must be different.");
+          if (qtyKg <= 0) return alert("Transfer quantity must be greater than 0.");
+
+          const sourceRow = findInventoryRow(itemName, fromCity);
+          if (!sourceRow) return alert("Source item/location not found in main inventory.");
+
+          const validItemAtFrom = getInventoryItems(fromCity).some((name) => normalizeText(name) === normalizeText(itemName));
+          if (!validItemAtFrom) {
+            return alert("Transfer item must be selected from source location inventory.");
+          }
+
+          if (Number(sourceRow.quantityKg || 0) < qtyKg) {
+            return alert(`Not enough source stock. Available: ${fmtNum(sourceRow.quantityKg || 0)} kg`);
+          }
+          if (Number(sourceRow.quantityBags || 0) < qtyBags) {
+            return alert(`Not enough source stock. Available: ${fmtNum(sourceRow.quantityBags || 0)} bags`);
+          }
+
+          const newEntry = {
+            id: state.editingTransferId || uid(),
+            itemName,
+            fromCity,
+            toCity,
+            qtyKg,
+            qtyBags,
+            itemType: normalizeInventoryType(sourceRow.type || inferInventoryTypeFromName(itemName, "raw")),
+            note,
+            status: "Sent",
+            receivedKg: 0,
+            statusNote: note,
+            statusUpdatedAt: now(),
+            statusUpdatedBy: state.user.id,
+            createdAt: now(),
+            enteredBy: state.user.id
+          };
+
+          const editingEntry = state.editingTransferId
+            ? state.db.transfers.find((entry) => entry.id === state.editingTransferId)
+            : null;
+
+          if (editingEntry) {
+            if (!canApplyTransferImpact(editingEntry, -1)) {
+              return alert("Cannot update this transfer right now because rollback would make inventory negative.");
+            }
+
+            applyTransferImpact(editingEntry, -1, state.user.id);
+
+            if (!canApplyTransferImpact(newEntry, 1)) {
+              applyTransferImpact(editingEntry, 1, state.user.id);
+              return alert("Not enough stock in source location for updated transfer.");
+            }
+
+            newEntry.status = editingEntry.status || "Sent";
+            newEntry.receivedKg = Number(editingEntry.receivedKg || 0);
+            newEntry.statusNote = editingEntry.statusNote || editingEntry.note || note;
+            newEntry.statusUpdatedAt = editingEntry.statusUpdatedAt || editingEntry.createdAt || now();
+            newEntry.statusUpdatedBy = editingEntry.statusUpdatedBy || editingEntry.enteredBy || state.user.id;
+
+            applyTransferImpact(newEntry, 1, state.user.id);
+            Object.assign(editingEntry, newEntry);
+            markLastEdited("transfer", editingEntry.id);
+          } else {
+            if (!canApplyTransferImpact(newEntry, 1)) {
+              return alert("Not enough stock in source location for this transfer.");
+            }
+
+            applyTransferImpact(newEntry, 1, state.user.id);
+            state.db.transfers.unshift(newEntry);
+            markLastEdited("transfer", newEntry.id);
+          }
+
+          await persistAppState();
+          renderAll();
+          const wasEditingTransfer = Boolean(state.editingTransferId);
+          clearTransferEditMode();
+          updateTransferStockHint();
+          showSavedFeedback(byId("save-transfer-btn"), wasEditingTransfer ? "Transfer updated" : "Transfer saved");
+        });
+
+        byId("save-transfer-status-btn").addEventListener("click", async () => {
+          if (!requireAuth()) return;
+          if (!canAccess("transfer")) return alert("No permission.");
+          if (!state.editingTransferId) return alert("Select a transfer from log and click Edit first.");
+
+          const entry = state.db.transfers.find((row) => row.id === state.editingTransferId);
+          if (!entry) return;
+
+          const status = byId("transfer-status").value || "Sent";
+          const receivedKgRaw = Number(byId("transfer-received-kg").value || 0);
+          const statusNote = byId("transfer-status-note").value.trim();
+          if (receivedKgRaw < 0) return alert("Received quantity cannot be negative.");
+          if (receivedKgRaw > Number(entry.qtyKg || 0)) return alert("Received quantity cannot be more than transfer quantity.");
+
+          entry.status = status;
+          entry.receivedKg = receivedKgRaw;
+          entry.statusNote = statusNote;
+          entry.statusUpdatedAt = now();
+          entry.statusUpdatedBy = state.user.id;
+
+          await persistAppState();
+          renderAll();
+          markLastEdited("transfer", entry.id);
+          showSavedFeedback(byId("save-transfer-status-btn"), "Transfer status updated");
+        });
+
+        byId("cancel-transfer-status-btn").addEventListener("click", () => {
+          clearTransferEditMode();
+          refreshTransferItemOptions();
+          updateTransferStockHint();
+        });
+
+        byId("save-sale-btn").addEventListener("click", async () => {
+          if (!requireAuth()) return;
+          if (!canAccess("sales")) return alert("No permission.");
+
+          const itemName = cleanText(byId("sale-item").value);
+          const city = cleanText(byId("sale-location").value);
+          const qtyKg = Number(byId("sale-qty").value || 0);
+          const qtyBags = qtyKg / BAG_WEIGHT_KG;
+          const packing = cleanText(byId("sale-packing").value || "Cone") || "Cone";
+          const ratePerKg = Number(byId("sale-rate").value || 0);
+          const totalInputValue = Number(byId("sale-total").value || 0);
+          const customer = byId("sale-customer").value.trim();
+          const invoice = byId("sale-invoice").value.trim();
+          const note = byId("sale-note").value.trim();
+          if (!itemName) return alert("Item is required.");
+          if (!city) return alert("Location is required.");
+          if (qtyKg <= 0) return alert("Sold quantity must be greater than 0.");
+          if (ratePerKg < 0) return alert("Rate cannot be negative.");
+
+          const sourceRow = findInventoryRow(itemName, city);
+          if (!sourceRow) return alert("Item/location not found in inventory.");
+          if (!isSaleReadyItemAtLocation(itemName, city)) {
+            return alert("Only grey cone, dyed cone, or other processed inventory can be sold from this module.");
+          }
+
+          const amount = totalInputValue > 0 ? totalInputValue : qtyKg * ratePerKg;
+          const newEntry = {
+            id: state.editingSaleId || uid(),
+            itemName,
+            city,
+            qtyKg,
+            qtyBags,
+            packing,
+            ratePerKg,
+            amount,
+            customer,
+            invoice,
+            note,
+            createdAt: now(),
+            enteredBy: state.user.id
+          };
+
+          const editingEntry = state.editingSaleId
+            ? state.db.salesEntries.find((entry) => entry.id === state.editingSaleId)
+            : null;
+
+          if (editingEntry) {
+            const isSameStockBucket = normalizeText(editingEntry.itemName) === normalizeText(newEntry.itemName)
+              && normalizeText(editingEntry.city) === normalizeText(newEntry.city);
+
+            if (isSameStockBucket) {
+              const oldQtyKg = Number(editingEntry.qtyKg || 0);
+              const newQtyKg = Number(newEntry.qtyKg || 0);
+              const diffKg = newQtyKg - oldQtyKg;
+              const diffBags = diffKg / BAG_WEIGHT_KG;
+
+              if (diffKg < 0) {
+                addInventoryStock(newEntry.itemName, newEntry.city, Math.abs(diffKg), Math.abs(diffBags), state.user.id);
+              } else if (diffKg > 0) {
+                const currentRow = findInventoryRow(newEntry.itemName, newEntry.city);
+                const availableKg = Number(currentRow?.quantityKg || 0);
+                if (!currentRow || availableKg < diffKg) {
+                  return alert(`Not enough stock for increased quantity. Extra required: ${fmtNum(diffKg)} kg, available: ${fmtNum(availableKg)} kg`);
+                }
+                addInventoryStock(newEntry.itemName, newEntry.city, -diffKg, -diffBags, state.user.id);
+              }
+            } else {
+              applySaleImpact(editingEntry, -1, state.user.id);
+              if (!canApplySaleImpact(newEntry, 1)) {
+                applySaleImpact(editingEntry, 1, state.user.id);
+                return alert("Not enough stock in selected location for updated sale.");
+              }
+              applySaleImpact(newEntry, 1, state.user.id);
+            }
+
+            newEntry.financeEntryId = editingEntry.financeEntryId || uid();
+            newEntry.createdAt = editingEntry.createdAt || newEntry.createdAt;
+            Object.assign(editingEntry, newEntry);
+            upsertLinkedSaleFinanceEntry(editingEntry);
+            markLastEdited("sales", editingEntry.id);
+          } else {
+            if (!canApplySaleImpact(newEntry, 1)) {
+              return alert(`Not enough stock. Available: ${fmtNum(sourceRow.quantityKg || 0)} kg`);
+            }
+
+            newEntry.financeEntryId = uid();
+            applySaleImpact(newEntry, 1, state.user.id);
+            upsertLinkedSaleFinanceEntry(newEntry);
+            state.db.salesEntries.unshift(newEntry);
+            markLastEdited("sales", newEntry.id);
+          }
+
+          await persistAppState();
+          renderAll();
+          const wasEditingSale = Boolean(state.editingSaleId);
+          clearSaleEditMode();
+          showSavedFeedback(byId("save-sale-btn"), wasEditingSale ? "Sale updated" : "Sale saved");
+        });
+
+        byId("remove-sale-btn").addEventListener("click", async () => {
+          if (!state.editingSaleId) return;
+          const entry = state.db.salesEntries.find((row) => row.id === state.editingSaleId);
+          if (!entry) return;
+
+          const ok = confirm(`Remove sale of \"${entry.itemName}\" from \"${entry.city}\"?`);
+          if (!ok) return;
+
+          applySaleImpact(entry, -1, state.user.id);
+          removeLinkedSaleFinanceEntry(entry);
+          state.db.salesEntries = state.db.salesEntries.filter((row) => row.id !== state.editingSaleId);
+          await persistAppState();
+          renderAll();
+          clearSaleEditMode();
+          showSavedFeedback(byId("save-sale-btn"), "Sale removed");
+        });
+
+        byId("save-txn-btn").addEventListener("click", async () => {
+          if (!requireAuth()) return;
+          if (!canAccess("finance")) return alert("No permission.");
+
+          const updatedEntry = {
+            id: state.editingFinanceId || uid(),
+            entryType: byId("txn-type").value,
+            category: byId("txn-category").value.trim(),
+            amount: Number(byId("txn-amount").value || 0),
+            reference: byId("txn-ref").value.trim(),
+            createdAt: now(),
+            enteredBy: state.user.id
+          };
+
+          const editingEntry = state.editingFinanceId
+            ? state.db.financeEntries.find((entry) => entry.id === state.editingFinanceId)
+            : null;
+
+          if (editingEntry && editingEntry.entryType === "Sale" && editingEntry.saleEntryId && state.db.salesEntries.some((entry) => entry.id === editingEntry.saleEntryId)) {
+            alert("Edit this from Sales / Dispatch module.");
+            return;
+          }
+
+          if (editingEntry) {
+            Object.assign(editingEntry, updatedEntry);
+            markLastEdited("finance", editingEntry.id);
+          } else {
+            state.db.financeEntries.unshift(updatedEntry);
+            markLastEdited("finance", updatedEntry.id);
+          }
+
+          await persistAppState();
+          renderAll();
+          const wasEditingFinance = Boolean(state.editingFinanceId);
+          clearFinanceEditMode();
+          showSavedFeedback(byId("save-txn-btn"), wasEditingFinance ? "Finance updated" : "Finance entry saved");
+        });
+
+        byId("run-report-btn").addEventListener("click", () => {
+          if (!requireAuth()) return;
+          if (!canAccess("reports")) return alert("No permission.");
+          renderReport();
+        });
+      }
+
+      function loginAs(user) {
+        state.user = normalizeUser(user);
+        enforceCurrentAdminAccess();
+        sessionStorage.setItem(SESSION_USER_KEY, state.user.id);
+        byId("login-section").classList.add("hidden");
+        byId("main-nav").classList.remove("hidden");
+        byId("user-box").classList.remove("hidden");
+        byId("whoami").textContent = `${state.user.username} • ${state.user.role}`;
+        applyNavigationPermissions();
+        setSection("dashboard");
+        renderDashboard();
+        renderAll();
+      }
+
+      function bindAuth() {
+        byId("login-btn").addEventListener("click", () => {
+          const username = byId("username").value.trim().toLowerCase();
+          const password = byId("password").value;
+
+          ensureAdminAccountExists();
+
+          if (username === "admin" && password === "admin123") {
+            const systemAdmin = state.users.find((u) => normalizeText(u.username) === "admin");
+            if (systemAdmin) {
+              systemAdmin.role = "admin";
+              systemAdmin.permissions = defaultPermissions("admin");
+              loginAs(systemAdmin);
+              persistAppState();
+              byId("login-status").textContent = "";
+              return;
+            }
+          }
+
+          const matches = state.users.filter((u) => String(u.username || "").toLowerCase() === username && u.password === password);
+          const user = matches.find((u) => String(u.role || "").toLowerCase() === "admin") || matches[0];
+          if (!user) {
+            byId("login-status").textContent = "Invalid login details.";
+            return;
+          }
+          byId("login-status").textContent = "";
+          loginAs(user);
+        });
+
+        byId("register-btn").addEventListener("click", async () => {
+          const username = byId("username").value.trim().toLowerCase();
+          const password = byId("password").value;
+
+          if (!username || !password) {
+            byId("login-status").textContent = "Username and password are required.";
+            return;
+          }
+
+          if (!/^[a-z0-9._-]{3,30}$/.test(username)) {
+            byId("login-status").textContent = "Username must be 3-30 chars: a-z, 0-9, ., _, -.";
+            return;
+          }
+
+          const exists = state.users.some((u) => String(u.username || "").toLowerCase() === username);
+          if (exists) {
+            byId("login-status").textContent = "Username already exists.";
+            return;
+          }
+
+          const newUser = normalizeUser({
+            id: uid(),
+            username,
+            password,
+            role: "operator",
+            permissions: defaultPermissions("operator")
+          });
+
+          state.users.push(newUser);
+          await persistAppState();
+          byId("login-status").textContent = "Account created. You can login now.";
+          loginAs(newUser);
+        });
+
+        byId("logout-btn").addEventListener("click", () => {
+          state.user = null;
+          sessionStorage.removeItem(SESSION_USER_KEY);
+          byId("main-nav").classList.add("hidden");
+          byId("user-box").classList.add("hidden");
+          MODULES.forEach((id) => byId(id).classList.add("hidden"));
+          byId("login-section").classList.remove("hidden");
+        });
+      }
+
+      function bindAdminControls() {
+        renderNewUserPermissions("operator");
+
+        byId("export-data-btn").addEventListener("click", () => {
+          if (!requireAuth()) return;
+          if (!canAccess("admin")) return alert("No permission.");
+
+          const payload = {
+            exportedAt: now(),
+            users: state.users,
+            db: state.db
+          };
+
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const anchor = document.createElement("a");
+          anchor.href = url;
+          anchor.download = `yarn-cone-backup-${now().slice(0, 10)}.json`;
+          document.body.appendChild(anchor);
+          anchor.click();
+          document.body.removeChild(anchor);
+          URL.revokeObjectURL(url);
+          showSavedFeedback(byId("export-data-btn"), "Backup exported");
+        });
+
+        byId("import-data-btn").addEventListener("click", () => {
+          if (!requireAuth()) return;
+          if (!canAccess("admin")) return alert("No permission.");
+          byId("import-data-file").click();
+        });
+
+        byId("import-data-file").addEventListener("change", async (event) => {
+          if (!requireAuth()) return;
+          if (!canAccess("admin")) return alert("No permission.");
+          const file = event.target.files && event.target.files[0];
+          if (!file) return;
+
+          try {
+            const raw = await file.text();
+            const parsed = JSON.parse(raw);
+            const importedUsers = (parsed.users || []).map(normalizeUser);
+            const importedDb = parsed.db || {};
+
+            state.users = importedUsers.length ? importedUsers : (EMBEDDED_SEED.users || []).map(normalizeUser);
+            state.db = {
+              inventory: (importedDb.inventory || []).map((row) => ({
+                ...row,
+                quantityKg: Number(row.quantityKg || 0),
+                quantityBags: Number(row.quantityBags || 0),
+                type: normalizeInventoryType(row.type || inferInventoryTypeFromName(row.itemName || "", "raw"))
+              })),
+              processEntries: (importedDb.processEntries || []).map((entry) => ({
+                ...entry,
+                qtyInKg: Number(entry.qtyInKg || 0),
+                qtyOutKg: Number(entry.qtyOutKg || 0),
+                qtyInBags: Number(entry.qtyInBags || 0),
+                qtyOutBags: Number(entry.qtyOutBags || 0),
+                bagsUsed: Number(entry.bagsUsed || 0),
+                lossPct: Number(entry.lossPct || 0),
+                conesProduced: Number(entry.conesProduced || 0),
+                autoAddCones: Boolean(entry.autoAddCones),
+                outputType: normalizeInventoryType(entry.outputType || inferOutputTypeByProcess(entry.processType || "", entry.outputItem || entry.processItem || entry.itemName || ""))
+              })),
+              transfers: (importedDb.transfers || []).map((entry) => ({
+                ...entry,
+                qtyKg: Number(entry.qtyKg || 0),
+                qtyBags: Number(entry.qtyBags || 0),
+                itemType: normalizeInventoryType(entry.itemType || inferInventoryTypeFromName(entry.itemName || "", "raw")),
+                status: entry.status || "Sent",
+                receivedKg: Number(entry.receivedKg || 0),
+                statusNote: entry.statusNote || "",
+                statusUpdatedAt: entry.statusUpdatedAt || entry.createdAt || now(),
+                statusUpdatedBy: entry.statusUpdatedBy || entry.enteredBy || ""
+              })),
+              salesEntries: (importedDb.salesEntries || []).map((entry) => ({
+                ...entry,
+                qtyKg: Number(entry.qtyKg || 0),
+                qtyBags: Number(entry.qtyBags || 0),
+                packing: cleanText(entry.packing || "Cone") || "Cone",
+                ratePerKg: Number(entry.ratePerKg || 0),
+                amount: Number(entry.amount || 0),
+                invoice: cleanText(entry.invoice || "")
+              })),
+              financeEntries: (importedDb.financeEntries || [])
+            };
+
+            const activeUser = state.user ? state.users.find((u) => u.id === state.user.id) : null;
+            if (activeUser) {
+              state.user = normalizeUser(activeUser);
+            } else {
+              state.user = state.users.find((u) => u.role === "admin") || state.users[0] || null;
+            }
+
+            saveUsers();
+            saveDb();
+            applyNavigationPermissions();
+            renderAll();
+            showSavedFeedback(byId("import-data-btn"), "Backup imported");
+          } catch {
+            alert("Invalid backup file.");
+          } finally {
+            byId("import-data-file").value = "";
+          }
+        });
+
+        byId("new-user-template").addEventListener("change", () => {
+          renderNewUserPermissions(byId("new-user-template").value);
+        });
+
+        byId("new-user-role").addEventListener("change", () => {
+          const role = byId("new-user-role").value;
+          byId("new-user-template").value = role === "admin" ? "full" : "operator";
+          renderNewUserPermissions(byId("new-user-template").value);
+        });
+
+        byId("add-user-btn").addEventListener("click", async () => {
+          if (!requireAuth()) return;
+          if (!canAccess("admin")) return alert("No permission.");
+
+          const username = byId("new-user-username").value.trim().toLowerCase();
+          const password = byId("new-user-password").value.trim();
+          const role = byId("new-user-role").value;
+          const template = byId("new-user-template").value;
+          if (!username || !password) return alert("Username and password are required.");
+          if (!/^[a-z0-9._-]{3,30}$/.test(username)) return alert("Username must be 3-30 chars: a-z, 0-9, ., _, -.");
+          if (state.users.some((u) => String(u.username || "").toLowerCase() === username)) return alert("User already exists.");
+
+          const permissions = template === "full" ? defaultPermissions("admin") : defaultPermissions("operator");
+          MODULES.forEach((module) => {
+            const input = document.querySelector(`#new-user-perms input[data-module='${module}']`);
+            if (input) permissions[module] = Boolean(input.checked);
+          });
+          if (role === "admin") Object.assign(permissions, defaultPermissions("admin"));
+          permissions.dashboard = true;
+
+          state.users.push(normalizeUser({ id: uid(), username, password, role, permissions }));
+          await persistAppState();
+          byId("new-user-username").value = "";
+          byId("new-user-password").value = "";
+          byId("new-user-role").value = "operator";
+          byId("new-user-template").value = "operator";
+          renderNewUserPermissions("operator");
+          renderUsersTable();
+          showSavedFeedback(byId("add-user-btn"), "User created");
+        });
+
+        byId("clear-all-data-btn").addEventListener("click", () => {
+          if (!requireAuth()) return;
+          if (!canAccess("admin")) return alert("No permission.");
+
+          const firstConfirm = confirm("This will clear complete data. Continue?");
+          if (!firstConfirm) return;
+
+          const confirmText = prompt("Type CLEAR to confirm complete wipe:");
+          if (confirmText !== "CLEAR") {
+            alert("Clear cancelled.");
+            return;
+          }
+
+          state.db = {
+            inventory: [],
+            processEntries: [],
+            transfers: [],
+            salesEntries: [],
+            financeEntries: []
+          };
+
+          state.users = (EMBEDDED_SEED.users || []).map(normalizeUser);
+
+          const fallbackAdmin = state.users.find((u) => u.role === "admin") || state.users[0];
+          if (fallbackAdmin) {
+            state.user = normalizeUser(fallbackAdmin);
+            byId("whoami").textContent = `${state.user.username} • ${state.user.role}`;
+          }
+
+          saveDb();
+          saveUsers();
+          clearInventoryEditMode();
+          applyNavigationPermissions();
+          setSection("dashboard");
+          renderAll();
+          showSavedFeedback(byId("clear-all-data-btn"), "All data cleared");
+        });
+      }
+
+      async function init() {
+        loadDb();
+        await loadUsers();
+        await loadSeedIfEmptyDb();
+        bindNavigation();
+        bindForms();
+        bindAuth();
+        bindAdminControls();
+
+        const sessionUserId = sessionStorage.getItem(SESSION_USER_KEY);
+        if (sessionUserId) {
+          const found = state.users.find((user) => user.id === sessionUserId);
+          if (found) {
+            loginAs(found);
+          }
+        }
+      }
+
+      init();
+    </script>
+  </body>
+</html>
